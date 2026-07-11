@@ -145,9 +145,10 @@ function validate(){
   for(const f of fields){if(!document.getElementById(f.id).value.trim()){setStatus('error','❌',`${f.label} is required`);document.getElementById(f.id).focus();return false}}
   const emails=parseEmails(document.getElementById('recipients').value);
   if(emails.length===0){setStatus('error','❌','Add at least 1 valid recipient email');return false}
-  if(emails.length>26){setStatus('error','❌','Max 50 recipients per batch');return false}
+  if(emails.length>50){setStatus('error','❌','Max 50 recipients per batch');return false}
   return emails
 }
+
 async function sendAll(){
   const emails=validate();if(!emails)return;
   const senderName=document.getElementById('senderName').value.trim();
@@ -158,23 +159,43 @@ async function sendAll(){
   const btn=document.getElementById('sendBtn');
   btn.disabled=true;btn.innerHTML='⏳ Sending...';
   clearLog();setStatus('sending','📤',`Sending to ${emails.length} recipients...`);setProgress(0,emails.length);
+  
   let ok=0,fail=0;
-  for(let i=0;i<emails.length;i++){
-    try{
-      const res=await fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody,to:emails[i]})});
-      const d=await res.json();
-      if(res.ok&&d.success){ok++;addLog('ok','✅',`Delivered → ${emails[i]}`)}
-      else{fail++;addLog('fail','❌',`Failed → ${emails[i]}`)}
-    }catch{fail++;addLog('fail','❌',`Error → ${emails[i]}`)}
-    setProgress(i+1,emails.length);
-    if(i<emails.length-2)await sleep(200);
+
+  // 3-3 ईमेल का चंक (Group) बनाकर एक साथ भेजने का नया लॉजिक
+  for(let i=0; i<emails.length; i+=3){
+    const chunk = emails.slice(i, i+3);
+    
+    const promises = chunk.map(async (email) => {
+      try{
+        const res=await fetch('/api/send-email',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody,to:email})
+        });
+        const d=await res.json();
+        if(res.ok&&d.success){ok++;addLog('ok','✅',`Delivered → ${email}`)}
+        else{fail++;addLog('fail','❌',`Failed → ${email}`)}
+      }catch{fail++;addLog('fail','❌',`Error → ${email}`)}
+    });
+
+    // 3 ईमेल को पैरेलल में एक साथ फायर करें
+    await Promise.all(promises);
+    
+    // प्रोग्रेस बार अपडेट करें
+    setProgress(Math.min(i + chunk.length, emails.length), emails.length);
+    
+    // हर 3 ईमेल के बाद आधा सेकंड (500ms) का सुरक्षित डिले
+    if(i + 3 < emails.length) await sleep(500);
   }
+
   if(fail===0){setStatus('success','🎉',`All ${ok} emails sent successfully!`);addLog('ok','✅',`${ok} emails delivered successfully`)}
   else if(ok===0){setStatus('error','💥',`All ${fail} emails failed. Check credentials.`);addLog('fail','❌',`All ${fail} failed — check Gmail & App Password`)}
   else{setStatus('sending','⚠️',`${ok} sent, ${fail} failed`);addLog('ok','✅',`${ok} delivered`);addLog('fail','❌',`${fail} failed`)}
   addLog('info','📊',`Total: ${emails.length}  ·  ✅ ${ok} success  ·  ❌ ${fail} failed`);
   btn.disabled=false;btn.innerHTML='🚀 Send All Emails';
 }
+
 function clearAll(){
   ['senderName','gmailId','appPassword','subject','messageBody','recipients'].forEach(id=>document.getElementById(id).value='');
   countRecipients();clearLog();document.getElementById('progressWrap').style.display='none';setStatus('','⚡','Ready to launch');
