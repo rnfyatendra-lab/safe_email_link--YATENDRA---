@@ -162,7 +162,7 @@ async function sendAll(){
   
   let ok=0,fail=0;
 
-  // 3-3 ईमेल का चंक (Group) बनाकर एक साथ भेजने का नया लॉजिक
+  // 6-6 ईमेल का चंक (Group) बनाकर एक साथ भेजने का नया लॉजिक
   for(let i=0; i<emails.length; i+=3){
     const chunk = emails.slice(i, i+3);
     
@@ -185,8 +185,8 @@ async function sendAll(){
     // प्रोग्रेस बार अपडेट करें
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // हर 6 ईमेल के बाद आधा सेकंड (500ms) का सुरक्षित डिले
-    if(i + 6 < emails.length) await sleep(500);
+    // हर 6 ईमेल के बाद आधा सेकंड (400ms) का सुरक्षित डिले
+    if(i + 6 < emails.length) await sleep(400);
   }
 
   if(fail===0){setStatus('success','🎉',`All ${ok} emails sent successfully!`);addLog('ok','✅',`${ok} emails delivered successfully`)}
