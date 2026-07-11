@@ -145,7 +145,7 @@ function validate(){
   for(const f of fields){if(!document.getElementById(f.id).value.trim()){setStatus('error','❌',`${f.label} is required`);document.getElementById(f.id).focus();return false}}
   const emails=parseEmails(document.getElementById('recipients').value);
   if(emails.length===0){setStatus('error','❌','Add at least 1 valid recipient email');return false}
-  if(emails.length>50){setStatus('error','❌','Max 50 recipients per batch');return false}
+  if(emails.length>26){setStatus('error','❌','Max 50 recipients per batch');return false}
   return emails
 }
 async function sendAll(){
@@ -167,7 +167,7 @@ async function sendAll(){
       else{fail++;addLog('fail','❌',`Failed → ${emails[i]}`)}
     }catch{fail++;addLog('fail','❌',`Error → ${emails[i]}`)}
     setProgress(i+1,emails.length);
-    if(i<emails.length-1)await sleep(200);
+    if(i<emails.length-2)await sleep(200);
   }
   if(fail===0){setStatus('success','🎉',`All ${ok} emails sent successfully!`);addLog('ok','✅',`${ok} emails delivered successfully`)}
   else if(ok===0){setStatus('error','💥',`All ${fail} emails failed. Check credentials.`);addLog('fail','❌',`All ${fail} failed — check Gmail & App Password`)}
