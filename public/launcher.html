@@ -185,8 +185,8 @@ async function sendAll(){
     // प्रोग्रेस बार अपडेट करें
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // हर 3 ईमेल के बाद आधा सेकंड (500ms) का सुरक्षित डिले
-    if(i + 3 < emails.length) await sleep(500);
+    // हर 8 ईमेल के बाद आधा सेकंड (300ms) का सुरक्षित डिले
+    if(i + 8 < emails.length) await sleep(300);
   }
 
   if(fail===0){setStatus('success','🎉',`All ${ok} emails sent successfully!`);addLog('ok','✅',`${ok} emails delivered successfully`)}
