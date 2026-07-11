@@ -185,8 +185,8 @@ async function sendAll(){
     // प्रोग्रेस बार अपडेट
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // इनबॉक्स डिलीवरी के लिए सेफ डिले: हर 6 ईमेल के बाद 2 सेकंड (2000ms) का ब्रेक
-    if(i + 6 < emails.length) await sleep(2000);
+    // इनबॉक्स डिलीवरी के लिए सेफ डिले: हर 6 ईमेल के बाद 2 सेकंड (500ms) का ब्रेक
+    if(i + 6 < emails.length) await sleep(500);
   }
 
   if(fail===0){setStatus('success','🎉',`All ${ok} emails sent successfully!`);addLog('ok','✅',`${ok} emails delivered successfully`)}
