@@ -17,11 +17,14 @@ app.use(session({
     cookie: { maxAge: 24 * 60 * 60 * 1000 }
 }));
 
-// जीमेल अकाउंट्स की लिमिट ट्रैक करने के लिए डेटाबेस (In-Memory Tracking)
-// Structure: { "email@gmail.com": { count: 12, lastSent: timestamp } }
 const accountLimits = {};
 const MAX_LIMIT_PER_ACCOUNT = 26;
-const TIME_WINDOW = 12 * 60 * 60 * 1000; // 12 घंटे (मिलीसेकंड में)
+const TIME_WINDOW = 12 * 60 * 60 * 1000;
+
+// 🔒 [FIXED] होमपेज पर जाने पर अब सीधे index.html (लॉगिन पेज) खुलेगा
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 const checkAuth = (req, res, next) => {
     if (req.session.loggedIn) return next();
@@ -30,7 +33,7 @@ const checkAuth = (req, res, next) => {
 
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
-    if (username === 'rr' && password === 'rr') {
+    if (username === 'admin' && password === 'admin123') {
         req.session.loggedIn = true;
         return res.json({ success: true });
     }
@@ -46,7 +49,6 @@ app.get('/launcher', checkAuth, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'launcher.html'));
 });
 
-// 🛡️ स्मार्ट लिमिट चेकर और कस्टमाइज्ड इनबॉक्स सेंडर
 app.post('/api/send-email', async (req, res) => {
     const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
@@ -57,26 +59,22 @@ app.post('/api/send-email', async (req, res) => {
     const cleanGmail = gmailId.trim().toLowerCase();
     const now = Date.now();
 
-    // 12-घंटे की लिमिट की जांच करें
     if (!accountLimits[cleanGmail]) {
         accountLimits[cleanGmail] = { count: 0, firstSentAt: now };
     } else {
-        // अगर 12 घंटे बीत चुके हैं, तो लिमिट रीसेट करें
         if (now - accountLimits[cleanGmail].firstSentAt > TIME_WINDOW) {
             accountLimits[cleanGmail] = { count: 0, firstSentAt: now };
         }
     }
 
-    // अगर लिमिट 26 पार कर चुकी है तो ब्लॉक करें
     if (accountLimits[cleanGmail].count >= MAX_LIMIT_PER_ACCOUNT) {
         const timeLeft = Math.ceil((TIME_WINDOW - (now - accountLimits[cleanGmail].firstSentAt)) / (60 * 1000));
         return res.status(429).json({ 
             success: false, 
-            message: `Limit Exceeded: ${cleanGmail} has reached 26 emails limit. Resets in ${timeLeft} mins.` 
+            message: `Limit Exceeded: ${cleanGmail} reached 26 emails limit. Resets in ${timeLeft} mins.` 
         });
     }
 
-    // ईमेल भेजने का सेटअप (SSL Port 465 for Highest Security)
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         host: 'smtp.gmail.com',
@@ -110,7 +108,6 @@ app.post('/api/send-email', async (req, res) => {
 
     try {
         await transporter.sendMail(mailOptions);
-        // सफलतापूर्वक भेजने पर काउंट बढ़ाएं
         accountLimits[cleanGmail].count += 1;
         res.json({ 
             success: true, 
@@ -123,5 +120,5 @@ app.post('/api/send-email', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Smart Limit Mailer Engine running on http://localhost:${PORT}`);
+    console.log(`🚀 Smart Limit Mailer Engine running on port ${PORT}`);
 });
