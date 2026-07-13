@@ -28,7 +28,7 @@ const checkAuth = (req, res, next) => {
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
     // आप अपने हिसाब से यूजरनेम/पासवर्ड बदल सकते हैं
-    if (username === 'admin' && password === 'admin123') {
+    if (username === 'y' && password === 'y') {
         req.session.loggedIn = true;
         return res.json({ success: true });
     }
