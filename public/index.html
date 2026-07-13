@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fast Mailer — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{min-height:100vh;background:#eef0ff;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{background:#fff;width:100%;max-width:400px;border-radius:16px;padding:32px;box-shadow:0 4px 20px rgba(102,126,234,0.15);border:2px solid #dde1ff}
+.title{font-size:24px;font-weight:700;color:#1a1a2e;text-align:center;margin-bottom:8px}
+.title span{color:#667eea}
+.subtitle{font-size:13px;color:#666;text-align:center;margin-bottom:28px}
+.field{margin-bottom:18px}
+.field label{display:block;font-size:13px;font-weight:600;color:#333;margin-bottom:7px}
+.field input{width:100%;padding:12px 15px;background:#f5f6ff;border:2px solid #dde1ff;border-radius:10px;color:#1a1a2e;font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:all 0.2s}
+.field input:focus{border-color:#667eea;background:#fff;box-shadow:0 0 0 4px rgba(102,126,234,0.12)}
+.btn{width:100%;padding:14px;background:linear-gradient(135deg,#667eea,#764ba2);border:none;border-radius:12px;color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;margin-top:10px}
+.btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(102,126,234,0.3)}
+.error-msg{display:none;background:#fff5f5;border:2px solid #ffcccc;color:#e53e3e;padding:10px;border-radius:8px;font-size:13px;font-weight:600;text-align:center;margin-bottom:18px}
+</style>
+</head>
+<body>
+
+<div class="login-card">
+  <div class="title">📧 Fast<span>Mailer</span></div>
+  <div class="subtitle">Sign in to launch your high-speed email campaigns</div>
+  <div class="error-msg" id="errorMsg">Invalid Credentials</div>
+  <form id="loginForm">
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="username" placeholder="Enter username" required>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="Enter password" required>
+    </div>
+    <button type="submit" class="btn">Launch Terminal 🚀</button>
+  </form>
+</div>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const err = document.getElementById('errorMsg');
+  
+  try {
+    const res = await fetch('/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      window.location.href = '/launcher';
+    } else {
+      err.style.display = 'block';
+      err.textContent = data.message || 'Login Failed';
+    }
+  } catch {
+    err.style.display = 'block';
+    err.textContent = 'Server connection error!';
+  }
+});
+</script>
+</body>
+</html>
