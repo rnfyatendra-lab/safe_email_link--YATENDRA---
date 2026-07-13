@@ -1,11 +1,10 @@
-// package.json के अनुसार dotenv को लोड करना (यदि आप .env फ़ाइल का उपयोग करते हैं)
+// package.json के अनुसार dotenv को लोड करना
 require('dotenv').config();
 
 const express = require('express');
 const session = require('express-session');
 const nodemailer = require('nodemailer');
 const path = require('path');
-// आपकी package.json की डिपेंडेंसी के अनुसार body-parser का उपयोग
 const bodyParser = require('body-parser');
 
 const app = express();
@@ -15,25 +14,34 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// स्टैटिक फाइल्स (CSS, JS, Images) के लिए public फ़ोल्डर
-app.use(express.static(path.join(__dirname, 'public')));
-
 // एक्सप्रेस सेशन कॉन्फ़िगरेशन
 app.use(session({
     secret: 'fastmailer_secure_rotate_key_2026',
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 घंटे का सेशन
+    cookie: { maxAge: 24 * 60 * 60 * 1000 }
 }));
 
-// इन-मेमोरी लिमिट ट्रैकर (12 घंटे में 26 ईमेल की सख्त लिमिट के लिए)
+// इन-मेमोरी लिमिट ट्रैकर (12 घंटे में 26 ईमेल की सख्त लिमिट)
 const accountLimits = {};
 const MAX_LIMIT_PER_ACCOUNT = 26;
-const TIME_WINDOW = 12 * 60 * 60 * 1000; // 12 घंटे मिलीसेकंड में
+const TIME_WINDOW = 12 * 60 * 60 * 1000;
 
-// 🔒 [FIXED] होमपेज रूट - जो सीधे आपकी लॉगिन स्क्रीन (index.html) खोलेगा (Cannot GET / एरर का फिक्स)
+// 🛡️ [ULTIMATE FIX] यह तरीका बिना किसी पाथ एरर के सीधे डिफ़ॉल्ट फ़ाइल लोड कर देगा
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'Public'))); // अगर 'P' बड़ा हो तो भी क्रैश नहीं होगा
+
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    // सबसे सेफ तरीका जो दोनों में से किसी भी फ़ोल्डर से index.html उठा लेगा
+    res.sendFile(path.resolve(__dirname, 'public', 'index.html'), (err) => {
+        if (err) {
+            res.sendFile(path.resolve(__dirname, 'Public', 'index.html'), (err2) => {
+                if (err2) {
+                    res.status(404).send('index.html not found inside public folder. Please check your file structure.');
+                }
+            });
+        }
+    });
 });
 
 // ऑथेंटिकेशन चेक मिडिलवेयर
@@ -60,10 +68,14 @@ app.post('/logout', (req, res) => {
 
 // मुख्य लॉन्चर पेज (डैशबोर्ड) रूट
 app.get('/launcher', checkAuth, (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'launcher.html'));
+    res.sendFile(path.resolve(__dirname, 'public', 'launcher.html'), (err) => {
+        if (err) {
+            res.sendFile(path.resolve(__dirname, 'Public', 'launcher.html'));
+        }
+    });
 });
 
-// 🛡️ स्मार्ट रोटेशन और एंटी-स्पैम ईमेल सेंडिंग API
+// स्मार्ट रोटेशन और एंटी-स्पैम ईमेल सेंडिंग API
 app.post('/api/send-email', async (req, res) => {
     const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
@@ -74,17 +86,14 @@ app.post('/api/send-email', async (req, res) => {
     const cleanGmail = gmailId.trim().toLowerCase();
     const now = Date.now();
 
-    // जीमेल अकाउंट के लिए टाइम-विंडो चेक और रीसेट लॉजिक
     if (!accountLimits[cleanGmail]) {
         accountLimits[cleanGmail] = { count: 0, firstSentAt: now };
     } else {
-        // अगर 12 घंटे पूरे हो चुके हैं, तो इस अकाउंट का काउंटर वापस 0 कर दें
         if (now - accountLimits[cleanGmail].firstSentAt > TIME_WINDOW) {
             accountLimits[cleanGmail] = { count: 0, firstSentAt: now };
         }
     }
 
-    // यदि यह अकाउंट 12 घंटे में अपनी 26 ईमेल की लिमिट पूरी कर चुका है
     if (accountLimits[cleanGmail].count >= MAX_LIMIT_PER_ACCOUNT) {
         const timeLeft = Math.ceil((TIME_WINDOW - (now - accountLimits[cleanGmail].firstSentAt)) / (60 * 1000));
         return res.status(429).json({ 
@@ -93,7 +102,6 @@ app.post('/api/send-email', async (req, res) => {
         });
     }
 
-    // Nodemailer ट्रांसपोर्टर सेटअप (SSL Port 465)
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         host: 'smtp.gmail.com',
@@ -105,7 +113,6 @@ app.post('/api/send-email', async (req, res) => {
         }
     });
 
-    // जीमेल इनबॉक्स डिलीवरी बूस्ट करने के लिए रैंडम मेसेज-आईडी
     const randomHex = Math.random().toString(36).substring(2, 15);
     const domain = cleanGmail.split('@')[1] || 'gmail.com';
     const messageId = `<${randomHex}.${Date.now()}@${domain}>`;
@@ -115,7 +122,6 @@ app.post('/api/send-email', async (req, res) => {
         to: to,
         subject: subject,
         text: messageBody,
-        // इनबॉक्स लैंडिंग हेडर्स (यह आपके ओरिजिनल टेक्स्ट या सब्जेक्ट को नहीं बदलता)
         headers: {
             'Message-ID': messageId,
             'MIME-Version': '1.0',
@@ -129,7 +135,6 @@ app.post('/api/send-email', async (req, res) => {
 
     try {
         await transporter.sendMail(mailOptions);
-        // सफलता पर काउंटर को 1 बढ़ाएं
         accountLimits[cleanGmail].count += 1;
         res.json({ 
             success: true, 
