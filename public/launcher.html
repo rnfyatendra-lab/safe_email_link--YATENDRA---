@@ -91,7 +91,7 @@ textarea#recipients{min-height:145px;font-size:13px}
       </div>
     </div>
     <div class="field"><label>Subject</label><input id="subject" type="text" placeholder="Email subject line"></div>
-    <div class="field"><label>Message Body</label><textarea id="messageBody" placeholder="Write content... Support Spintax {Hello|Hi} User!"></textarea></div>
+    <div class="field"><label>Message Body</label><textarea id="messageBody" placeholder="Write your email content exactly as it should be sent..."></textarea></div>
   </div>
 
   <div class="card">
@@ -104,12 +104,11 @@ textarea#recipients{min-height:145px;font-size:13px}
       <textarea id="recipients" placeholder="Paste emails here:&#10;&#10;alice@gmail.com&#10;bob@yahoo.com, carol@outlook.com" oninput="countRecipients()"></textarea>
     </div>
     <div class="tips">
-      <strong>📋 Tips & Smart Features</strong>
+      <strong>📋 Tips</strong>
       Separate by comma or new line<br>
       Max <b>50 recipients</b> per batch<br>
-      ⚡ <b>Superfast Speed:</b> Sends 6 emails at once parallelly<br>
-      🛡️ <b>Inbox Boost:</b> Auto-adds unique ID codes to subject lines<br>
-      🌀 <b>Spintax Support:</b> Use <code>{Hey|Hello|Hi}</code> in body for unique versions
+      ⚡ <b>Exact Delivery:</b> No extra text or codes will be added.<br>
+      ⚡ <b>Superfast Speed:</b> Sends 6 emails at once parallelly.
     </div>
   </div>
 </div>
@@ -141,18 +140,6 @@ function addLog(t,icon,msg){const lb=document.getElementById('logBox'),ll=docume
 function clearLog(){document.getElementById('logList').innerHTML='';document.getElementById('logBox').style.display='none'}
 function setProgress(cur,tot){const w=document.getElementById('progressWrap');w.style.display='flex';const pct=tot>0?Math.round(cur/tot*100):0;document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').textContent=`Sending ${cur} / ${tot}`}
 
-// स्पिनटैक्स जनरेटर फंक्शन
-function parseSpintax(text) {
-  const matches = text.match(/\{[^{}]+\}/g);
-  if (!matches) return text;
-  for (let match of matches) {
-    const choices = match.slice(1, -1).split('|');
-    const randomChoice = choices[Math.floor(Math.random() * choices.length)];
-    text = text.replace(match, randomChoice);
-  }
-  return parseSpintax(text);
-}
-
 function validate(){
   const fields=[{id:'senderName',label:'Sender Name'},{id:'gmailId',label:'Gmail ID'},{id:'appPassword',label:'App Password'},{id:'subject',label:'Subject'},{id:'messageBody',label:'Message Body'}];
   for(const f of fields){if(!document.getElementById(f.id).value.trim()){setStatus('error','❌',`${f.label} is required`);document.getElementById(f.id).focus();return false}}
@@ -167,31 +154,26 @@ async function sendAll(){
   const senderName=document.getElementById('senderName').value.trim();
   const gmailId=document.getElementById('gmailId').value.trim();
   const appPassword=document.getElementById('appPassword').value.trim();
-  const baseSubject=document.getElementById('subject').value.trim();
+  const subject=document.getElementById('subject').value.trim();
   const messageBody=document.getElementById('messageBody').value.trim();
   const btn=document.getElementById('sendBtn');
   
-  btn.disabled=true;btn.innerHTML='⏳ Sending Superfast...';
+  btn.disabled=true;btn.innerHTML='⏳ Sending...';
   clearLog();setStatus('sending','📤',`Sending to ${emails.length} recipients...`);setProgress(0,emails.length);
   
   let ok=0,fail=0;
 
-  // लूप i += 6 पर सेट है ताकि एक साथ 6 ईमेल का पैरेलल ग्रुप जाए
+  // लूप i += 6 पर सेट है ताकि एक साथ 6 ईमेल का पैरेलल ग्रुप जाए (स्पीड बिल्कुल वही)
   for(let i=0; i<emails.length; i+=6){
     const chunk = emails.slice(i, i+6);
     
     const promises = chunk.map(async (email) => {
-      // इनबॉक्स डिलीवरी बूस्टर: हर ईमेल के लिए सब्जेक्ट में रैंडम यूनिक कोड जोड़ना
-      const finalSubject = `${baseSubject} [#${Math.floor(1000 + Math.random() * 9000)}]`;
-      
-      // प्रत्येक ईमेल के लिए स्पिनटैक्स बॉडी जनरेट करना
-      const finalBody = parseSpintax(messageBody);
-
       try{
         const res=await fetch('/api/send-email',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({senderName,gmailId,appPassword,subject:finalSubject,messageBody:finalBody,to:email})
+          // शुद्ध डेटा ट्रांसफर—बिना किसी बदलाव या एक्स्ट्रा वर्ड्स के
+          body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody,to:email})
         });
         const d=await res.json();
         if(res.ok&&d.success){ok++;addLog('ok','✅',`Delivered → ${email}`)}
@@ -199,7 +181,7 @@ async function sendAll(){
       }catch{fail++;addLog('fail','❌',`Error → ${email}`)}
     });
 
-    // 6 ईमेल बिना किसी डिले के एक साथ (Parallel) फायर होंगे (मैक्सिमम स्पीड)
+    // 6 ईमेल बिना किसी डिले के एक साथ (Parallel) तुरंत फायर होंगे 
     await Promise.all(promises);
     
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
