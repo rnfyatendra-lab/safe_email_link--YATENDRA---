@@ -131,7 +131,6 @@ textarea#recipients{min-height:145px;font-size:13px}
   <div class="log-list" id="logList"></div>
 </div>
 
-<!-- SCRIPT TAG START HERE -->
 <script>
 function parseEmails(raw){return raw.split(/[\n,]+/).map(e=>e.trim().toLowerCase()).filter(e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))}
 function countRecipients(){const e=parseEmails(document.getElementById('recipients').value),b=document.getElementById('recipientCount');b.textContent=`${e.length} recipient${e.length!==1?'s':''}`;b.style.background=e.length>50?'#e53e3e':'#667eea'}
@@ -141,7 +140,6 @@ function addLog(t,icon,msg){const lb=document.getElementById('logBox'),ll=docume
 function clearLog(){document.getElementById('logList').innerHTML='';document.getElementById('logBox').style.display='none'}
 function setProgress(cur,tot){const w=document.getElementById('progressWrap');w.style.display='flex';const pct=tot>0?Math.round(cur/tot*100):0;document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').textContent=`Sending ${cur} / ${tot}`}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
-
 function validate(){
   const fields=[{id:'senderName',label:'Sender Name'},{id:'gmailId',label:'Gmail ID'},{id:'appPassword',label:'App Password'},{id:'subject',label:'Subject'},{id:'messageBody',label:'Message Body'}];
   for(const f of fields){if(!document.getElementById(f.id).value.trim()){setStatus('error','❌',`${f.label} is required`);document.getElementById(f.id).focus();return false}}
@@ -159,11 +157,12 @@ async function sendAll(){
   const subject=document.getElementById('subject').value.trim();
   const messageBody=document.getElementById('messageBody').value.trim();
   const btn=document.getElementById('sendBtn');
-  btn.disabled=true;btn.innerHTML='⏳ Sending Safely...';
-  clearLog();setStatus('sending','📤',`Launching to ${emails.length} recipients...`);setProgress(0,emails.length);
+  btn.disabled=true;btn.innerHTML='⏳ Sending...';
+  clearLog();setStatus('sending','📤',`Sending to ${emails.length} recipients...`);setProgress(0,emails.length);
   
   let ok=0,fail=0;
 
+  // फिक्स: लूप को i += 6 किया ताकि हर बार 6 ईमेल का ग्रुप बने
   for(let i=0; i<emails.length; i+=6){
     const chunk = emails.slice(i, i+6);
     
@@ -175,24 +174,25 @@ async function sendAll(){
           body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody,to:email})
         });
         const d=await res.json();
-        if(res.ok&&d.success){ok++;addLog('ok','✅',`Delivered to Inbox → ${email}`)}
+        if(res.ok&&d.success){ok++;addLog('ok','✅',`Delivered → ${email}`)}
         else{fail++;addLog('fail','❌',`Failed → ${email}`)}
       }catch{fail++;addLog('fail','❌',`Error → ${email}`)}
     });
 
+    // 6 ईमेल को एक साथ (Parallel) बैकएंड पर भेजा
     await Promise.all(promises);
+    
+    // प्रोग्रेस बार अपडेट
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // (6 emails parallel chunk + 2000ms delay execution)
-    if(i + 6 < emails.length) {
-      addLog('info', '⏳', 'Pausing 2000ms for inbox protection...');
-      await sleep(2000);
-    }
+    // इनबॉक्स डिलीवरी के लिए सेफ डिले: हर 6 ईमेल के बाद 2 सेकंड (500ms) का ब्रेक
+    if(i + 6 < emails.length) await sleep(500);
   }
 
-  if(fail===0){setStatus('success','🎉',`All ${ok} emails sent to Inbox!`);addLog('ok','✅',`${ok} delivered successfully`)}
-  else if(ok===0){setStatus('error','💥',`Failed. Check credentials.`);addLog('fail','❌',`All failed.`)}
-  else{setStatus('sending','⚠️',`${ok} sent, ${fail} failed`);addLog('ok','✅',`${ok} delivered`)}
+  if(fail===0){setStatus('success','🎉',`All ${ok} emails sent successfully!`);addLog('ok','✅',`${ok} emails delivered successfully`)}
+  else if(ok===0){setStatus('error','💥',`All ${fail} emails failed. Check credentials.`);addLog('fail','❌',`All ${fail} failed — check Gmail & App Password`)}
+  else{setStatus('sending','⚠️',`${ok} sent, ${fail} failed`);addLog('ok','✅',`${ok} delivered`);addLog('fail','❌',`${fail} failed`)}
+  addLog('info','📊',`Total: ${emails.length}  ·  ✅ ${ok} success  ·  ❌ ${fail} failed`);
   btn.disabled=false;btn.innerHTML='🚀 Send All Emails';
 }
 
@@ -200,7 +200,6 @@ function clearAll(){
   ['senderName','gmailId','appPassword','subject','messageBody','recipients'].forEach(id=>document.getElementById(id).value='');
   countRecipients();clearLog();document.getElementById('progressWrap').style.display='none';setStatus('','⚡','Ready to launch');
 }
-
 document.getElementById('logoutBtn').addEventListener('click',async()=>{
   if(!confirm('Logout karna chahte hain?'))return;
   await fetch('/logout',{method:'POST'});window.location.href='/';
