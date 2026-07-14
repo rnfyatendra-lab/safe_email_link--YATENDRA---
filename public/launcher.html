@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fast Mailer — Launcher</title>
+<title>Fast Mailer — Inbox Optimizer</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -39,9 +39,9 @@ textarea#recipients{min-height:145px;font-size:13px}
 .rec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
 .rec-header label{margin-bottom:0}
 .badge{font-size:11px;font-weight:700;padding:3px 12px;background:#667eea;color:#fff;border-radius:20px;transition:background 0.3s}
-.tips{padding:14px;background:#f5f6ff;border:2px solid #dde1ff;border-radius:10px;font-size:12px;color:#666;line-height:1.9;margin-top:14px}
-.tips strong{color:#444;display:block;margin-bottom:5px;font-size:11px;text-transform:uppercase;letter-spacing:0.8px;font-weight:700}
-.tips b{color:#667eea}
+.tips{padding:14px;background:#fff5f5;border:2px solid #ffcccc;border-radius:10px;font-size:12px;color:#666;line-height:1.9;margin-top:14px}
+.tips strong{color:#e53e3e;display:block;margin-bottom:5px;font-size:11px;text-transform:uppercase;letter-spacing:0.8px;font-weight:700}
+.tips b{color:#1a1a2e}
 .progress-wrap{display:none;align-items:center;gap:14px;padding:14px 20px;background:#fff;border:2px solid #dde1ff;border-radius:12px;margin-bottom:20px}
 .progress-bar{flex:1;height:8px;background:#eef0ff;border-radius:10px;overflow:hidden}
 .progress-fill{height:100%;background:linear-gradient(90deg,#667eea,#764ba2);border-radius:10px;width:0%;transition:width 0.3s ease}
@@ -75,13 +75,13 @@ textarea#recipients{min-height:145px;font-size:13px}
 
 <div class="status-bar" id="statusBar">
   <span class="status-icon" id="statusIcon">⚡</span>
-  <span class="status-text" id="statusText">Ready to launch</span>
+  <span class="status-text" id="statusText">Ready for Normal Gmail Mode</span>
 </div>
 
 <div class="main-grid">
   <div class="card">
     <div class="card-title">⚙️ Sender Config</div>
-    <div class="field"><label>Sender Name</label><input id="senderName" type="text" placeholder="e.g. Rahul Sharma"></div>
+    <div class="field"><label>Sender Name</label><input id="senderName" type="text" placeholder="Must match your Gmail profile name"></div>
     <div class="field"><label>Gmail ID</label><input id="gmailId" type="email" placeholder="you@gmail.com"></div>
     <div class="field">
       <label>App Password</label>
@@ -101,13 +101,13 @@ textarea#recipients{min-height:145px;font-size:13px}
         <label>Email List</label>
         <span class="badge" id="recipientCount">0 recipients</span>
       </div>
-      <textarea id="recipients" placeholder="Paste emails here:&#10;&#10;alice@gmail.com&#10;bob@yahoo.com, carol@outlook.com" oninput="countRecipients()"></textarea>
+      <textarea id="recipients" placeholder="Paste emails here..." oninput="countRecipients()"></textarea>
     </div>
     <div class="tips">
-      <strong>📋 Mailer Status</strong>
-      Separate by comma or new line<br>
-      Automated <b>6 Parallel Mode</b> sending active<br>
-      Exact Text Delivery: 100% original text will be sent without any modifications.
+      <strong>🛡️ Anti-Spam Free Gmail Rules Active</strong>
+      • <b>Human Flow Mode:</b> Sends 1 by 1 (Not all together).<br>
+      • <b>Random Safe Delay:</b> 5 to 8 seconds gap between every single email.<br>
+      • <b>Exact Copy:</b> No greeting or footer text will be added.
     </div>
   </div>
 </div>
@@ -154,54 +154,50 @@ async function sendAll(){
   const gmailId=document.getElementById('gmailId').value.trim();
   const appPassword=document.getElementById('appPassword').value.trim();
   const subject=document.getElementById('subject').value.trim();
-  const messageBody=document.getElementById('messageBody').value.trim(); // 100% हुबहू टेक्स्ट डिलीवरी
+  const messageBody=document.getElementById('messageBody').value.trim();
   const btn=document.getElementById('sendBtn');
   
-  btn.disabled=true;btn.innerHTML='⏳ Sending...';
-  clearLog();setStatus('sending','📤',`Sending to ${emails.length} recipients...`);setProgress(0,emails.length);
+  btn.disabled=true;btn.innerHTML='⏳ Safe Sending Active...';
+  clearLog();setStatus('sending','📤',`Processing ${emails.length} emails human-style...`);setProgress(0,emails.length);
   
   let ok=0,fail=0;
 
-  // 6 ईमेल का पैरेलल लूप (जैसे पहले इनबॉक्स हो रहा था)
-  for(let i=0; i<emails.length; i+=6){
-    const chunk = emails.slice(i, i+6);
+  // फ्री जीमेल के लिए 1-by-1 लूप (ताकि गूगल ट्रैक न करे)
+  for(let i=0; i<emails.length; i++){
+    const email = emails[i];
     
-    const promises = chunk.map(async (email) => {
-      try{
-        const res=await fetch('/api/send-email',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody,to:email})
-        });
-        const d=await res.json();
-        if(res.ok&&d.success){ok++;addLog('ok','✅',`Delivered → ${email}`)}
-        else{fail++;addLog('fail','❌',`Failed → ${email}`)}
-      }catch{fail++;addLog('fail','❌',`Error → ${email}`)}
-    });
+    try{
+      const res=await fetch('/api/send-email',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody,to:email})
+      });
+      const d=await res.json();
+      if(res.ok&&d.success){ok++;addLog('ok','✅',`Sent → ${email}`)}
+      else{fail++;addLog('fail','❌',`Failed → ${email}`)}
+    }catch{fail++;addLog('fail','❌',`Error → ${email}`)}
 
-    await Promise.all(promises);
+    setProgress(i + 1, emails.length);
     
-    setProgress(Math.min(i + chunk.length, emails.length), emails.length);
-    
-    // फिक्स डिले: हर पैकेट के बाद 1 सेकंड (1000ms) का ब्रेक
-    if(i + 6 < emails.length) {
-        await sleep(1000);
+    // स्पैम बाईपास डिले: हर एक ईमेल के बाद 5 से 8 सेकंड का रैंडम गैप
+    if(i < emails.length - 1) {
+        const humanDelay = Math.floor(Math.random() * (8000 - 5000 + 1)) + 5000;
+        addLog('info','⏳',`Waiting ${Math.round(humanDelay/1000)}s before next mail to prevent spam...`);
+        await sleep(humanDelay);
     }
   }
 
-  if(fail===0){setStatus('success','🎉',`All ${ok} emails sent successfully!`);addLog('ok','✅',`${ok} emails delivered successfully`)}
-  else if(ok===0){setStatus('error','💥',`All ${fail} emails failed. Check credentials.`);addLog('fail','❌',`All ${fail} failed — check Gmail & App Password`)}
-  else{setStatus('sending','⚠️',`${ok} sent, ${fail} failed`);addLog('ok','✅',`${ok} delivered`);addLog('fail','❌',`${fail} failed`)}
-  addLog('info','📊',`Total: ${emails.length}  ·  ✅ ${ok} success  ·  ❌ ${fail} failed`);
+  if(fail===0){setStatus('success','🎉',`Done! All ${ok} inboxed.`);addLog('ok','✅',`All clear`)}
+  else{setStatus('sending','⚠️',`${ok} Sent, ${fail} Failed`);addLog('fail','❌',`${fail} errors detected`)}
   btn.disabled=false;btn.innerHTML='🚀 Send All Emails';
 }
 
 function clearAll(){
   ['senderName','gmailId','appPassword','subject','messageBody','recipients'].forEach(id=>document.getElementById(id).value='');
-  countRecipients();clearLog();document.getElementById('progressWrap').style.display='none';setStatus('','⚡','Ready to launch');
+  countRecipients();clearLog();document.getElementById('progressWrap').style.display='none';setStatus('','⚡','Ready');
 }
 document.getElementById('logoutBtn').addEventListener('click',async()=>{
-  if(!confirm('Logout karna chahte hain?'))return;
+  if(!confirm('Logout?'))return;
   await fetch('/logout',{method:'POST'});window.location.href='/';
 });
 </script>
