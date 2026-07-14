@@ -104,11 +104,11 @@ textarea#recipients{min-height:145px;font-size:13px}
       <textarea id="recipients" placeholder="Paste emails here:&#10;&#10;alice@gmail.com&#10;bob@yahoo.com, carol@outlook.com" oninput="countRecipients()"></textarea>
     </div>
     <div class="tips">
-      <strong>📋 Smart Anti-Spam Active</strong>
+      <strong>📋 Mailer Status</strong>
       Separate by comma or new line<br>
-      Automated <b>6 Parallel Mode</b> sending<br>
-      Smart <b>Random Human Delay (2s - 5s)</b> dynamically chosen<br>
-      Dynamic <b>Spintax Greeting Text</b> added to maximize Inbox delivery
+      Automated <b>6 Parallel Mode</b> sending active<br>
+      Smart <b>Random Human Delay (2s - 5s)</b> chosen automatically between batches<br>
+      Exact Text Delivery: No extra greeting words will be added.
     </div>
   </div>
 </div>
@@ -141,12 +141,6 @@ function clearLog(){document.getElementById('logList').innerHTML='';document.get
 function setProgress(cur,tot){const w=document.getElementById('progressWrap');w.style.display='flex';const pct=tot>0?Math.round(cur/tot*100):0;document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').textContent=`Sending ${cur} / ${tot}`}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
-// गूगल स्पैम फिल्टर को चकमा देने के लिए रैंडम ग्रीटिंग जनरेटर
-function getRandomGreeting() {
-  const greetings = ["Hello,\n\n", "Hi,\n\n", "Greetings,\n\n", "Dear Customer,\n\n", "Hey,\n\n", "Hello There,\n\n"];
-  return greetings[Math.floor(Math.random() * greetings.length)];
-}
-
 function validate(){
   const fields=[{id:'senderName',label:'Sender Name'},{id:'gmailId',label:'Gmail ID'},{id:'appPassword',label:'App Password'},{id:'subject',label:'Subject'},{id:'messageBody',label:'Message Body'}];
   for(const f of fields){if(!document.getElementById(f.id).value.trim()){setStatus('error','❌',`${f.label} is required`);document.getElementById(f.id).focus();return false}}
@@ -161,7 +155,7 @@ async function sendAll(){
   const gmailId=document.getElementById('gmailId').value.trim();
   const appPassword=document.getElementById('appPassword').value.trim();
   const subject=document.getElementById('subject').value.trim();
-  const baseMessageBody=document.getElementById('messageBody').value.trim();
+  const messageBody=document.getElementById('messageBody').value.trim(); // एक्स्ट्रा ग्रीटिंग हटा दी गई है, हुबहू टेक्स्ट जाएगा
   const btn=document.getElementById('sendBtn');
   
   btn.disabled=true;btn.innerHTML='⏳ Sending...';
@@ -174,17 +168,14 @@ async function sendAll(){
     const chunk = emails.slice(i, i+6);
     
     const promises = chunk.map(async (email) => {
-      // हर ईमेल का टेक्स्ट रैंडमली थोड़ा बदल जाएगा ताकि इनबॉक्स हो सके
-      const uniqueMessageBody = getRandomGreeting() + baseMessageBody;
-
       try{
         const res=await fetch('/api/send-email',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody:uniqueMessageBody,to:email})
+          body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody,to:email})
         });
         const d=await res.json();
-        if(res.ok&&d.success){ok++;addLog('ok','✅',`Inboxed → ${email}`)}
+        if(res.ok&&d.success){ok++;addLog('ok','✅',`Delivered → ${email}`)}
         else{fail++;addLog('fail','❌',`Failed → ${email}`)}
       }catch{fail++;addLog('fail','❌',`Error → ${email}`)}
     });
@@ -194,7 +185,7 @@ async function sendAll(){
     
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // सुरक्षित डिले: हर पैकेट के बाद 2 से 5 सेकंड का रैंडम ब्रेक (गूगल ट्रैकर बाईपास)
+    // सुरक्षित डिले: हर पैकेट के बाद 2 से 5 सेकंड का रैंडम ब्रेक (गूगल ट्रैकर बाईपास करने के लिए)
     if(i + 6 < emails.length) {
         const randomDelay = Math.floor(Math.random() * (5000 - 2000 + 1)) + 2000;
         addLog('info','⏳',`Taking human-like safety break for ${Math.round(randomDelay/1000)}s...`);
