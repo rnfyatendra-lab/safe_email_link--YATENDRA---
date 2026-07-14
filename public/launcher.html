@@ -104,11 +104,11 @@ textarea#recipients{min-height:145px;font-size:13px}
       <textarea id="recipients" placeholder="Paste emails here:&#10;&#10;alice@gmail.com&#10;bob@yahoo.com, carol@outlook.com" oninput="countRecipients()"></textarea>
     </div>
     <div class="tips">
-      <strong>📋 Deliverability & Stability Tips</strong>
-      • <b>Personalization:</b> Avoid dynamic app scripts; write contextual content instead.<br>
-      • <b>Pacing Limits:</b> Max recommended batch is 50 recipients to stay within fair limits.<br>
-      • <b>Authentication:</b> Make sure your custom domain has valid SPF and DKIM records.<br>
-      • <b>Google Workspace:</b> Standard Gmail accounts have stricter spam filters than corporate Workspace IDs.
+      <strong>📋 Guidelines</strong>
+      • Max <b>50 recipients</b> per batch recommended.<br>
+      • Separate addresses by comma or new line.<br>
+      • Ensure your template formatting is proper.<br>
+      • Use a valid Gmail <b>App Password</b> for connection.
     </div>
   </div>
 </div>
@@ -158,34 +158,40 @@ async function sendAll(){
   const messageBody=document.getElementById('messageBody').value.trim();
   const btn=document.getElementById('sendBtn');
   
-  btn.disabled=true;btn.innerHTML='⏳ Executing Requests...';
-  clearLog();setStatus('sending','📤',`Processing ${emails.length} queue items...`);setProgress(0,emails.length);
+  btn.disabled=true;btn.innerHTML='⏳ Sending Chunks...';
+  clearLog();setStatus('sending','📤',`Processing ${emails.length} emails...`);setProgress(0,emails.length);
   
   let ok=0,fail=0;
-  // Sequential execution strategy with persistent pacing intervals to protect the delivery pipe
-  for(let i=0; i<emails.length; i++){
-    const email = emails[i];
-    try{
-      const res=await fetch('/api/send-email',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody,to:email})
-      });
-      const d=await res.json();
-      if(res.ok&&d.success){ok++;addLog('ok','✅',`Dispatched → ${email}`)}
-      else{fail++;addLog('fail','❌',`Rejected → ${email}`)}
-    }catch{fail++;addLog('fail','❌',`Network Error → ${email}`)}
+
+  // Optimized: Process exactly 3 emails in parallel per chunk
+  for(let i=0; i<emails.length; i+=3){
+    const chunk = emails.slice(i, i+3);
     
-    setProgress(i+1, emails.length);
+    const promises = chunk.map(async (email) => {
+      try{
+        const res=await fetch('/api/send-email',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody,to:email})
+        });
+        const d=await res.json();
+        if(res.ok&&d.success){ok++;addLog('ok','✅',`Sent → ${email}`)}
+        else{fail++;addLog('fail','❌',`Rejected → ${email}`)}
+      }catch{fail++;addLog('fail','❌',`Network Error → ${email}`)}
+    });
+
+    // 3 parallel operations execute together
+    await Promise.all(promises);
+    setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // Controlled structural gap between single consecutive dispatches (5000ms standard rate limit protection)
-    if(i + 1 < emails.length) {
-      addLog('info', '⏳', 'Applying rate-limit protection gap...');
-      await sleep(5000);
+    // Balanced Throttle Delay: 500ms pause after every batch of 3 emails
+    if(i + 3 < emails.length) {
+      addLog('info', '⏳', 'Pacing delay active between chunks...');
+      await sleep(500);
     }
   }
 
-  if(fail===0){setStatus('success','🎉',`Completed: ${ok} operations processed.`);addLog('ok','✅',`Queue finished.`)}
+  if(fail===0){setStatus('success','🎉',`Completed: All ${ok} emails processed successfully!`);addLog('ok','✅',`Queue finished.`)}
   else if(ok===0){setStatus('error','💥',`All operations failed. Verify SMTP connection.`);addLog('fail','❌',`Process terminated with errors.`)}
   else{setStatus('sending','⚠️',`${ok} successful, ${fail} failed`);addLog('ok','✅',`${ok} synchronized`);addLog('fail','❌',`${fail} dropped`)}
   btn.disabled=false;btn.innerHTML='🚀 Send All Emails';
