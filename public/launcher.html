@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fast Mailer — Inbox Optimizer</title>
+<title>Fast Mailer — Plain Text Optimizer</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -39,9 +39,9 @@ textarea#recipients{min-height:145px;font-size:13px}
 .rec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
 .rec-header label{margin-bottom:0}
 .badge{font-size:11px;font-weight:700;padding:3px 12px;background:#667eea;color:#fff;border-radius:20px;transition:background 0.3s}
-.tips{padding:14px;background:#fff5f5;border:2px solid #ffcccc;border-radius:10px;font-size:12px;color:#666;line-height:1.9;margin-top:14px}
-.tips strong{color:#e53e3e;display:block;margin-bottom:5px;font-size:11px;text-transform:uppercase;letter-spacing:0.8px;font-weight:700}
-.tips b{color:#1a1a2e}
+.tips{padding:14px;background:#f5f6ff;border:2px solid #dde1ff;border-radius:10px;font-size:12px;color:#666;line-height:1.9;margin-top:14px}
+.tips strong{color:#444;display:block;margin-bottom:5px;font-size:11px;text-transform:uppercase;letter-spacing:0.8px;font-weight:700}
+.tips b{color:#667eea}
 .progress-wrap{display:none;align-items:center;gap:14px;padding:14px 20px;background:#fff;border:2px solid #dde1ff;border-radius:12px;margin-bottom:20px}
 .progress-bar{flex:1;height:8px;background:#eef0ff;border-radius:10px;overflow:hidden}
 .progress-fill{height:100%;background:linear-gradient(90deg,#667eea,#764ba2);border-radius:10px;width:0%;transition:width 0.3s ease}
@@ -75,13 +75,13 @@ textarea#recipients{min-height:145px;font-size:13px}
 
 <div class="status-bar" id="statusBar">
   <span class="status-icon" id="statusIcon">⚡</span>
-  <span class="status-text" id="statusText">Ready for Normal Gmail Mode</span>
+  <span class="status-text" id="statusText">Ready to send via Normal Gmail</span>
 </div>
 
 <div class="main-grid">
   <div class="card">
     <div class="card-title">⚙️ Sender Config</div>
-    <div class="field"><label>Sender Name</label><input id="senderName" type="text" placeholder="Must match your Gmail profile name"></div>
+    <div class="field"><label>Sender Name</label><input id="senderName" type="text" placeholder="Must match Gmail profile name"></div>
     <div class="field"><label>Gmail ID</label><input id="gmailId" type="email" placeholder="you@gmail.com"></div>
     <div class="field">
       <label>App Password</label>
@@ -91,7 +91,7 @@ textarea#recipients{min-height:145px;font-size:13px}
       </div>
     </div>
     <div class="field"><label>Subject</label><input id="subject" type="text" placeholder="Email subject line"></div>
-    <div class="field"><label>Message Body</label><textarea id="messageBody" placeholder="Write your email content here..."></textarea></div>
+    <div class="field"><label>Message Body</label><textarea id="messageBody" placeholder="Write exact message content here..."></textarea></div>
   </div>
 
   <div class="card">
@@ -101,13 +101,13 @@ textarea#recipients{min-height:145px;font-size:13px}
         <label>Email List</label>
         <span class="badge" id="recipientCount">0 recipients</span>
       </div>
-      <textarea id="recipients" placeholder="Paste emails here..." oninput="countRecipients()"></textarea>
+      <textarea id="recipients" placeholder="Paste emails here (one per line)..." oninput="countRecipients()"></textarea>
     </div>
     <div class="tips">
-      <strong>🛡️ Anti-Spam Free Gmail Rules Active</strong>
-      • <b>Human Flow Mode:</b> Sends 1 by 1 (Not all together).<br>
-      • <b>Random Safe Delay:</b> 5 to 8 seconds gap between every single email.<br>
-      • <b>Exact Copy:</b> No greeting or footer text will be added.
+      <strong>⚙️ Normal Gmail Shield</strong>
+      • Sends <b>1-by-1 Plain Text</b> to bypass strict HTML filters.<br>
+      • Automated <b>5-8 Seconds Safe Break</b> to avoid bot detection.<br>
+      • exact text delivery guaranteed without edits.
     </div>
   </div>
 </div>
@@ -157,12 +157,11 @@ async function sendAll(){
   const messageBody=document.getElementById('messageBody').value.trim();
   const btn=document.getElementById('sendBtn');
   
-  btn.disabled=true;btn.innerHTML='⏳ Safe Sending Active...';
-  clearLog();setStatus('sending','📤',`Processing ${emails.length} emails human-style...`);setProgress(0,emails.length);
+  btn.disabled=true;btn.innerHTML='⏳ Safe Mode Sending...';
+  clearLog();setStatus('sending','📤',`Sending to ${emails.length} recipients...`);setProgress(0,emails.length);
   
   let ok=0,fail=0;
 
-  // फ्री जीमेल के लिए 1-by-1 लूप (ताकि गूगल ट्रैक न करे)
   for(let i=0; i<emails.length; i++){
     const email = emails[i];
     
@@ -173,22 +172,22 @@ async function sendAll(){
         body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody,to:email})
       });
       const d=await res.json();
-      if(res.ok&&d.success){ok++;addLog('ok','✅',`Sent → ${email}`)}
+      if(res.ok&&d.success){ok++;addLog('ok','✅',`Delivered → ${email}`)}
       else{fail++;addLog('fail','❌',`Failed → ${email}`)}
     }catch{fail++;addLog('fail','❌',`Error → ${email}`)}
 
     setProgress(i + 1, emails.length);
     
-    // स्पैम बाईपास डिले: हर एक ईमेल के बाद 5 से 8 सेकंड का रैंडम गैप
+    // सुरक्षित डिले: हर ईमेल के बाद 5 से 8 सेकंड का रैंडम ब्रेक
     if(i < emails.length - 1) {
-        const humanDelay = Math.floor(Math.random() * (8000 - 5000 + 1)) + 5000;
-        addLog('info','⏳',`Waiting ${Math.round(humanDelay/1000)}s before next mail to prevent spam...`);
-        await sleep(humanDelay);
+        const randomDelay = Math.floor(Math.random() * (8000 - 5000 + 1)) + 5000;
+        addLog('info','⏳',`Taking human-like break for ${Math.round(randomDelay/1000)}s...`);
+        await sleep(randomDelay);
     }
   }
 
-  if(fail===0){setStatus('success','🎉',`Done! All ${ok} inboxed.`);addLog('ok','✅',`All clear`)}
-  else{setStatus('sending','⚠️',`${ok} Sent, ${fail} Failed`);addLog('fail','❌',`${fail} errors detected`)}
+  if(fail===0){setStatus('success','🎉',`Completed successfully!`);addLog('ok','✅',`All emails processed`)}
+  else{setStatus('sending','⚠️',`${ok} Sent, ${fail} Failed`);addLog('fail','❌',`${fail} issues recorded`)}
   btn.disabled=false;btn.innerHTML='🚀 Send All Emails';
 }
 
