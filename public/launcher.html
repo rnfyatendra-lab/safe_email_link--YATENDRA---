@@ -157,12 +157,12 @@ async function sendAll(){
   const subject=document.getElementById('subject').value.trim();
   const messageBody=document.getElementById('messageBody').value.trim();
   const btn=document.getElementById('sendBtn');
-  btn.disabled=true;btn.innerHTML='⏳ Sending...';
+  btn.disabled=true;btn.innerHTML='⏳ Sending Safely...';
   clearLog();setStatus('sending','📤',`Sending to ${emails.length} recipients...`);setProgress(0,emails.length);
   
   let ok=0,fail=0;
 
-  // फिक्स: लूप को i += 6 किया ताकि हर बार 6 ईमेल का ग्रुप बने
+  // Har bar 6 emails parallel chunks mein jayenge
   for(let i=0; i<emails.length; i+=6){
     const chunk = emails.slice(i, i+6);
     
@@ -174,24 +174,25 @@ async function sendAll(){
           body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody,to:email})
         });
         const d=await res.json();
-        if(res.ok&&d.success){ok++;addLog('ok','✅',`Delivered → ${email}`)}
+        if(res.ok&&d.success){ok++;addLog('ok','✅',`Sent → ${email}`)}
         else{fail++;addLog('fail','❌',`Failed → ${email}`)}
       }catch{fail++;addLog('fail','❌',`Error → ${email}`)}
     });
 
-    // 6 ईमेल को एक साथ (Parallel) बैकएंड पर भेजा
+    // 6 requests parallel handle hongi
     await Promise.all(promises);
-    
-    // प्रोग्रेस बार अपडेट
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // इनबॉक्स डिलीवरी के लिए सेफ डिले: हर 6 ईमेल के बाद 2 सेकंड (500ms) का ब्रेक
-    if(i + 6 < emails.length) await sleep(500);
+    // Balanced Throttle Delay: 4500ms pacing gap to mimic natural request patterns without editing content
+    if(i + 6 < emails.length) {
+      addLog('info', '⏳', 'Pacing flow for anti-spam stability...');
+      await sleep(4500);
+    }
   }
 
-  if(fail===0){setStatus('success','🎉',`All ${ok} emails sent successfully!`);addLog('ok','✅',`${ok} emails delivered successfully`)}
-  else if(ok===0){setStatus('error','💥',`All ${fail} emails failed. Check credentials.`);addLog('fail','❌',`All ${fail} failed — check Gmail & App Password`)}
-  else{setStatus('sending','⚠️',`${ok} sent, ${fail} failed`);addLog('ok','✅',`${ok} delivered`);addLog('fail','❌',`${fail} failed`)}
+  if(fail===0){setStatus('success','🎉',`All ${ok} emails processed successfully!`);addLog('ok','✅',`${ok} messages sent`)}
+  else if(ok===0){setStatus('error','💥',`All failed. Check SMTP credentials.`);addLog('fail','❌',`All operations failed.`)}
+  else{setStatus('sending','⚠️',`${ok} sent, ${fail} failed`);addLog('ok','✅',`${ok} processed`);addLog('fail','❌',`${fail} errors`)}
   addLog('info','📊',`Total: ${emails.length}  ·  ✅ ${ok} success  ·  ❌ ${fail} failed`);
   btn.disabled=false;btn.innerHTML='🚀 Send All Emails';
 }
