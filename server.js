@@ -12,13 +12,12 @@ app.get('/', (req, res) => {
 });
 
 app.post('/api/send-email', async (req, res) => {
-    const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
+    const { gmailId, appPassword, subject, messageBody, to } = req.body;
 
-    if (!senderName || !gmailId || !appPassword || !subject || !messageBody || !to) {
+    if (!gmailId || !appPassword || !subject || !messageBody || !to) {
         return res.status(400).json({ success: false, error: 'Missing parameters' });
     }
 
-    // Gmail SMTP Setup
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -27,21 +26,26 @@ app.post('/api/send-email', async (req, res) => {
         }
     });
 
-    // Unique Message-ID generation to look organic to spam filters
+    // Content Rotation Engine to bypass fingerprint filtering
+    const uniqueID = crypto.randomBytes(4).toString('hex');
+    const randomizedSubject = `${subject} (Ref: #${uniqueID})`;
+    
+    // Invisible space and unique footer injection so Google reads it as a fresh human email
+    const organicBody = `${messageBody}\n\n---\nSent securely via client channel [ID: ${uniqueID}]`;
+
     const randomHex = crypto.randomBytes(16).toString('hex');
     const domain = gmailId.split('@')[1] || 'gmail.com';
-    const messageId = `<${randomHex}@${domain}>`;
 
     const mailOptions = {
-        from: `"${senderName}" <${gmailId}>`,
+        from: gmailId, // Only Gmail ID used as sender source
         to: to,
-        subject: subject,
-        text: messageBody,
+        subject: randomizedSubject,
+        text: organicBody,
         headers: {
-            'Message-ID': messageId,
-            'X-Mailer': 'Nodemailer/FastMailer-Engine',
-            'X-Priority': '3', // Normal Priority
-            'List-Unsubscribe': `<mailto:${gmailId}?subject=unsubscribe>` // Anti-Spam factor
+            'Message-ID': `<${randomHex}@${domain}>`,
+            'X-Mailer': 'Gmail-Web-Interface-Mobile', // Spoofing as regular mobile layout
+            'X-Priority': '3',
+            'MIME-Version': '1.0'
         }
     };
 
@@ -60,5 +64,5 @@ app.post('/logout', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Optimized Server running on port ${PORT}`);
+    console.log(`Anti-Spam Multi-Thread Server running on port ${PORT}`);
 });
