@@ -8,7 +8,12 @@ app.use(express.json());
 // Serve static assets from public folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Standard API Endpoint for Mail Dispatch
+// Explicit Route for default root path
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Standard API Endpoint for Parallel Mail Dispatch
 app.post('/api/send-email', async (req, res) => {
     const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
@@ -16,7 +21,7 @@ app.post('/api/send-email', async (req, res) => {
         return res.status(400).json({ success: false, error: 'Missing parameters' });
     }
 
-    // Configure standard SMTP connection
+    // Configure SMTP transport layers
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -25,7 +30,6 @@ app.post('/api/send-email', async (req, res) => {
         }
     });
 
-    // Setup standard text content structure
     const mailOptions = {
         from: `"${senderName}" <${gmailId}>`,
         to: to,
@@ -37,12 +41,11 @@ app.post('/api/send-email', async (req, res) => {
         await transporter.sendMail(mailOptions);
         return res.status(200).json({ success: true });
     } catch (error) {
-        console.error(`SMTP Dispatch Failure for ${to}:`, error.message);
+        console.error(`SMTP Error for ${to}:`, error.message);
         return res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// Dummy logout route used by UI
 app.post('/logout', (req, res) => {
     res.status(200).json({ success: true });
 });
