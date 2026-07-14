@@ -1,19 +1,16 @@
 const express = require('express');
 const nodemailer = require('nodemailer');
 const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
 app.use(express.json());
-
-// Serve static assets from public folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Explicit Route for default root path
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-// Standard API Endpoint for Parallel Mail Dispatch
 app.post('/api/send-email', async (req, res) => {
     const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
@@ -21,7 +18,7 @@ app.post('/api/send-email', async (req, res) => {
         return res.status(400).json({ success: false, error: 'Missing parameters' });
     }
 
-    // Configure SMTP transport layers
+    // Gmail SMTP Setup
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -30,11 +27,22 @@ app.post('/api/send-email', async (req, res) => {
         }
     });
 
+    // Unique Message-ID generation to look organic to spam filters
+    const randomHex = crypto.randomBytes(16).toString('hex');
+    const domain = gmailId.split('@')[1] || 'gmail.com';
+    const messageId = `<${randomHex}@${domain}>`;
+
     const mailOptions = {
         from: `"${senderName}" <${gmailId}>`,
         to: to,
         subject: subject,
-        text: messageBody
+        text: messageBody,
+        headers: {
+            'Message-ID': messageId,
+            'X-Mailer': 'Nodemailer/FastMailer-Engine',
+            'X-Priority': '3', // Normal Priority
+            'List-Unsubscribe': `<mailto:${gmailId}?subject=unsubscribe>` // Anti-Spam factor
+        }
     };
 
     try {
@@ -52,5 +60,5 @@ app.post('/logout', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server executing structurally on port ${PORT}`);
+    console.log(`Optimized Server running on port ${PORT}`);
 });
