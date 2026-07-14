@@ -101,14 +101,13 @@ textarea#recipients{min-height:145px;font-size:13px}
         <label>Email List</label>
         <span class="badge" id="recipientCount">0 recipients</span>
       </div>
-      <textarea id="recipients" placeholder="Paste emails here:&#10;&#10;alice@gmail.com&#10;bob@yahoo.com, carol@outlook.com" oninput="countRecipients()"></textarea>
+      <textarea id="recipients" placeholder="Paste emails here:&#10;&#10;alice@gmail.com&#10;bob@yahoo.com" oninput="countRecipients()"></textarea>
     </div>
     <div class="tips">
-      <strong>📋 Guidelines</strong>
-      • Max <b>50 recipients</b> per batch recommended.<br>
-      • Separate addresses by comma or new line.<br>
-      • Ensure your template formatting is proper.<br>
-      • Use a valid Gmail <b>App Password</b> for connection.
+      <strong>📋 System Specs</strong>
+      • <b>Mode:</b> Concurrent Processing (Parallel - 3).<br>
+      • <b>Interval:</b> 5000ms delay between batch steps.<br>
+      • <b>Batch Limit:</b> Up to 50 recipients per operation window.
     </div>
   </div>
 </div>
@@ -163,7 +162,6 @@ async function sendAll(){
   
   let ok=0,fail=0;
 
-  // Optimized: Process exactly 3 emails in parallel per chunk
   for(let i=0; i<emails.length; i+=3){
     const chunk = emails.slice(i, i+3);
     
@@ -180,11 +178,9 @@ async function sendAll(){
       }catch{fail++;addLog('fail','❌',`Network Error → ${email}`)}
     });
 
-    // 3 parallel operations execute together
     await Promise.all(promises);
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // Balanced Throttle Delay: 500ms pause after every batch of 3 emails
     if(i + 3 < emails.length) {
       addLog('info', '⏳', 'Pacing delay active between chunks...');
       await sleep(500);
