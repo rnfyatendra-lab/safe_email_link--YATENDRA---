@@ -107,8 +107,7 @@ textarea#recipients{min-height:145px;font-size:13px}
       <strong>📋 Mailer Status</strong>
       Separate by comma or new line<br>
       Automated <b>6 Parallel Mode</b> sending active<br>
-      Smart <b>Random Human Delay (2s - 5s)</b> chosen automatically between batches<br>
-      Exact Text Delivery: No extra greeting words will be added.
+      Exact Text Delivery: 100% original text will be sent without any modifications.
     </div>
   </div>
 </div>
@@ -155,7 +154,7 @@ async function sendAll(){
   const gmailId=document.getElementById('gmailId').value.trim();
   const appPassword=document.getElementById('appPassword').value.trim();
   const subject=document.getElementById('subject').value.trim();
-  const messageBody=document.getElementById('messageBody').value.trim(); // एक्स्ट्रा ग्रीटिंग हटा दी गई है, हुबहू टेक्स्ट जाएगा
+  const messageBody=document.getElementById('messageBody').value.trim(); // 100% हुबहू टेक्स्ट डिलीवरी
   const btn=document.getElementById('sendBtn');
   
   btn.disabled=true;btn.innerHTML='⏳ Sending...';
@@ -163,7 +162,7 @@ async function sendAll(){
   
   let ok=0,fail=0;
 
-  // 6 ईमेल का पैरेलल स्लॉट लूप
+  // 6 ईमेल का पैरेलल लूप (जैसे पहले इनबॉक्स हो रहा था)
   for(let i=0; i<emails.length; i+=6){
     const chunk = emails.slice(i, i+6);
     
@@ -180,16 +179,13 @@ async function sendAll(){
       }catch{fail++;addLog('fail','❌',`Error → ${email}`)}
     });
 
-    // 6 ईमेल्स को एक साथ पैरेलल ट्रिगर किया
     await Promise.all(promises);
     
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // सुरक्षित डिले: हर पैकेट के बाद 2 से 5 सेकंड का रैंडम ब्रेक (गूगल ट्रैकर बाईपास करने के लिए)
+    // फिक्स डिले: हर पैकेट के बाद 1 सेकंड (1000ms) का ब्रेक
     if(i + 6 < emails.length) {
-        const randomDelay = Math.floor(Math.random() * (5000 - 2000 + 1)) + 2000;
-        addLog('info','⏳',`Taking human-like safety break for ${Math.round(randomDelay/1000)}s...`);
-        await sleep(randomDelay);
+        await sleep(1000);
     }
   }
 
