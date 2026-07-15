@@ -1,9 +1,15 @@
 const express = require('express');
 const nodemailer = require('nodemailer');
+const path = require('path'); // पाथ मॉड्यूल जोड़ा ताकि फाइल आसानी से मिल सके
 const app = express();
 
 app.use(express.json());
-app.use(express.static('public')); // आपकी HTML फाइलें public फोल्डर में होनी चाहिए
+app.use(express.static(path.join(__dirname, 'public'))); 
+
+// 1. यह रूट जोड़ने से 'Cannot GET /' वाली एरर खत्म हो जाएगी
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'launcher.html')); // अगर आपकी मुख्य फाइल का नाम index.html है तो यहाँ वह नाम लिख दें
+});
 
 app.post('/api/send-email', async (req, res) => {
     const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
@@ -12,7 +18,6 @@ app.post('/api/send-email', async (req, res) => {
         return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    // ट्रांसपोर्टर कॉन्फ़िगरेशन (नॉर्मल जीमेल और ऐप पासवर्ड के लिए)
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -21,12 +26,11 @@ app.post('/api/send-email', async (req, res) => {
         }
     });
 
-    // ईमेल ऑप्शंस - प्योर प्लेन टेक्स्ट मोड एक्टिवेटेड
     const mailOptions = {
         from: `"${senderName}" <${gmailId}>`,
         to: to,
         subject: subject,
-        text: messageBody // ← यहाँ 'html' की जगह 'text' किया है, जिससे हुबहू वही टेक्स्ट जाएगा और स्पैम बाईपास होगा
+        text: messageBody // प्योर प्लेन टेक्स्ट मोड एक्टिव
     };
 
     try {
@@ -38,7 +42,6 @@ app.post('/api/send-email', async (req, res) => {
     }
 });
 
-// लॉगआउट एंडपॉइंट
 app.post('/logout', (req, res) => {
     res.json({ success: true });
 });
