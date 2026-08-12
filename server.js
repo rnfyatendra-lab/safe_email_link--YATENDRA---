@@ -42,18 +42,11 @@ app.get('/launcher', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'launcher.html'));
 });
 
-// Authentication Endpoints
+// Authentication Endpoints (With Default Fallback Credentials)
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  const validUser = process.env.ADMIN_USER;
-  const validPass = process.env.ADMIN_PASS;
-
-  if (!validUser || !validPass) {
-    return res.status(500).json({ 
-      success: false, 
-      message: '.env file me ADMIN_USER ya ADMIN_PASS missing hai.' 
-    });
-  }
+  const validUser = process.env.ADMIN_USER || '@#@#@';
+  const validPass = process.env.ADMIN_PASS || '@#@#@';
 
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
@@ -79,7 +72,6 @@ function getTransporter(gmailId, appPassword) {
   const key = `${gmailId}:${appPassword}`;
 
   if (!transporterCache.has(key)) {
-    // Memory leak protection: Cache limit exceeds karne par old connections clear karta hai
     if (transporterCache.size >= MAX_CACHE_SIZE) {
       const oldestKey = transporterCache.keys().next().value;
       const oldTransporter = transporterCache.get(oldestKey);
@@ -92,7 +84,7 @@ function getTransporter(gmailId, appPassword) {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: { user: gmailId, pass: appPassword },
-      pool: true,          // Connection pooling keeps speed fast
+      pool: true,          // Fast sending rate via connection reuse
       maxConnections: 5,   // Concurrent connections allowed
       maxMessages: 100
     });
@@ -111,7 +103,6 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
     return res.status(400).json({ success: false, message: 'Required fields missing' });
   }
 
-  // Basic recipient validation
   const recipient = to.trim();
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(recipient)) {
