@@ -1,38 +1,38 @@
-const express    = require('express');
-const session    = require('express-session');
+const express = require('express');
+const session = require('express-session');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
-const path       = require('path');
+const path = require('path');
 require('dotenv').config();
 
-const app  = express();
-const PORT = process.env.PORT || 3000;
+const app = process.env.PORT || 3000;
+const expressApp = express();
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(session({
+expressApp.use(bodyParser.json());
+expressApp.use(bodyParser.urlencoded({ extended: true }));
+expressApp.use(session({
   secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2024',
   resave: false,
   saveUninitialized: false,
   cookie: { secure: false, maxAge: 1000 * 60 * 60 * 8 }
 }));
-app.use(express.static(path.join(__dirname, 'public')));
+expressApp.use(express.static(path.join(__dirname, 'public')));
 
 function requireLogin(req, res, next) {
   if (req.session?.loggedIn) return next();
   res.redirect('/');
 }
 
-app.get('/', (req, res) => {
+expressApp.get('/', (req, res) => {
   if (req.session?.loggedIn) return res.redirect('/launcher');
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-app.get('/launcher', requireLogin, (req, res) => {
+expressApp.get('/launcher', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'launcher.html'));
 });
 
-app.post('/login', (req, res) => {
+expressApp.post('/login', (req, res) => {
   const { username, password } = req.body;
   const validUser = process.env.ADMIN_USER || '@#@#@';
   const validPass = process.env.ADMIN_PASS || '@#@#@';
@@ -43,34 +43,58 @@ app.post('/login', (req, res) => {
   res.json({ success: false, message: 'Invalid username or password' });
 });
 
-app.post('/logout', (req, res) => {
+expressApp.post('/logout', (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-app.post('/api/send-email', requireLogin, async (req, res) => {
-  const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
-  if (!gmailId || !appPassword || !to)
-    return res.status(400).json({ success: false, message: 'Missing fields' });
+// Cache transporters to optimize performance and prevent repeated connection handshakes
+const transporterCache = new Map();
 
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: gmailId, pass: appPassword }
-  });
+function getTransporter(gmailId, appPassword) {
+  const key = `${gmailId}:${appPassword}`;
+  if (!transporterCache.has(key)) {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: gmailId, pass: appPassword },
+      pool: true, // Reuses SMTP connections for higher speed
+      maxConnections: 5,
+      maxMessages: 100
+    });
+    transporterCache.set(key, transporter);
+  }
+  return transporterCache.get(key);
+}
+
+expressApp.post('/api/send-email', requireLogin, async (req, res) => {
+  const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
+
+  if (!gmailId || !appPassword || !to) {
+    return res.status(400).json({ success: false, message: 'Missing fields' });
+  }
+
+  const transporter = getTransporter(gmailId, appPassword);
+
+  const mailOptions = {
+    from: senderName ? `"${senderName}" <${gmailId}>` : gmailId,
+    to,
+    subject: subject || 'No Subject',
+    text: messageBody,
+    html: `<div style="font-family: Arial, sans-serif; font-size: 14px; color: #333333; line-height: 1.5;">
+            ${messageBody.replace(/\n/g, '<br>')}
+           </div>`,
+    headers: {
+      'X-Mailer': 'NodeMailer',
+      'X-Priority': '3' // Normal priority
+    }
+  };
 
   try {
-    await transporter.sendMail({
-      from: senderName ? `"${senderName}" <${gmailId}>` : `"${gmailId}" <${gmailId}>`,
-      to,
-      subject,
-      text: messageBody
-      // HTML nahi — plain text = personal email = Primary inbox
-      // Koi bulk/newsletter headers nahi
-    });
-    res.json({ success: true });
+    const info = await transporter.sendMail(mailOptions);
+    res.json({ success: true, messageId: info.messageId });
   } catch (err) {
-    console.error(`❌ ${to}:`, err.message);
+    console.error(`❌ Send error to ${to}:`, err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Fast Mailer on port ${PORT}`));
+expressApp.listen(app, () => console.log(`🚀 Mailer server running on port ${app}`));
