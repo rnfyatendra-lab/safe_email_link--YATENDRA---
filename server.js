@@ -1,5 +1,6 @@
 const express = require('express');
 const session = require('express-session');
+const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const path = require('path');
 require('dotenv').config();
@@ -7,32 +8,31 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Built-in Body Parser with Payload Limit
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+// Middleware setup using body-parser
+app.use(bodyParser.json({ limit: '5mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '5mb' }));
 
-// Secure Session Configuration
+// Session management
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-secure-key-2026',
+  secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2026',
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 1000 * 60 * 60 * 8 // 8 hours
+  cookie: { 
+    secure: false, 
+    maxAge: 1000 * 60 * 60 * 8 // 8 Hours
   }
 }));
 
-// Static Asset Serving
+// Static files route
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Auth Guard Middleware
+// Authentication Guard Middleware
 function requireLogin(req, res, next) {
   if (req.session?.loggedIn) return next();
-  res.status(401).redirect('/');
+  res.redirect('/');
 }
 
-// UI Routes
+// Page Routes
 app.get('/', (req, res) => {
   if (req.session?.loggedIn) return res.redirect('/launcher');
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
@@ -42,7 +42,7 @@ app.get('/launcher', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'launcher.html'));
 });
 
-// Authentication Endpoints (With Default Fallback Credentials)
+// Login API Endpoint
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
   const validUser = process.env.ADMIN_USER || '@#@#@';
@@ -56,74 +56,58 @@ app.post('/login', (req, res) => {
   res.status(401).json({ success: false, message: 'Invalid username or password' });
 });
 
+// Logout API Endpoint
 app.post('/logout', (req, res) => {
-  req.session.destroy((err) => {
-    if (err) return res.status(500).json({ success: false, message: 'Logout error' });
+  req.session.destroy(() => {
     res.clearCookie('connect.sid');
     res.json({ success: true });
   });
 });
 
-// Safe Transporter Cache with Connection Pooling for High Speed
+// Fast Transporter Cache Mechanism
 const transporterCache = new Map();
-const MAX_CACHE_SIZE = 50;
 
 function getTransporter(gmailId, appPassword) {
   const key = `${gmailId}:${appPassword}`;
-
   if (!transporterCache.has(key)) {
-    if (transporterCache.size >= MAX_CACHE_SIZE) {
-      const oldestKey = transporterCache.keys().next().value;
-      const oldTransporter = transporterCache.get(oldestKey);
-      if (oldTransporter && typeof oldTransporter.close === 'function') {
-        oldTransporter.close();
-      }
-      transporterCache.delete(oldestKey);
-    }
-
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: { user: gmailId, pass: appPassword },
-      pool: true,          // Fast sending rate via connection reuse
-      maxConnections: 5,   // Concurrent connections allowed
+      pool: true,         // Fast bulk mailing connection reuse
+      maxConnections: 5,  // Parallel processing
       maxMessages: 100
     });
-
     transporterCache.set(key, transporter);
   }
-
   return transporterCache.get(key);
 }
 
-// Email Dispatch Endpoint
+// Send Email API Endpoint
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
   if (!gmailId || !appPassword || !to || !messageBody) {
-    return res.status(400).json({ success: false, message: 'Required fields missing' });
+    return res.status(400).json({ success: false, message: 'Missing required fields' });
   }
 
   const recipient = to.trim();
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(recipient)) {
-    return res.status(400).json({ success: false, message: 'Invalid recipient email' });
-  }
 
   try {
     const transporter = getTransporter(gmailId, appPassword);
 
-    const info = await transporter.sendMail({
+    const mailOptions = {
       from: senderName ? `"${senderName.trim()}" <${gmailId.trim()}>` : `"${gmailId.trim()}" <${gmailId.trim()}>`,
       to: recipient,
       subject: subject || '',
       text: messageBody
-    });
+    };
 
+    const info = await transporter.sendMail(mailOptions);
     res.json({ success: true, messageId: info.messageId });
   } catch (err) {
-    console.error(`❌ Send failure [${recipient}]:`, err.message);
+    console.error(`❌ Send error to ${recipient}:`, err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Fast Mailer listening on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server active on http://localhost:${PORT}`));
