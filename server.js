@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json({ limit: '5mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '5mb' }));
 
-// Session Setup
+// Secure Session Setup
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2026',
   resave: false,
@@ -62,7 +62,7 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// Sleep Helper for Throttling
+// Sleep Helper
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Transporter Cache with Connection Pooling
@@ -74,18 +74,18 @@ function getTransporter(gmailId, appPassword) {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: { user: gmailId, pass: appPassword },
-      pool: true,          // Connection pooling for stability
-      maxConnections: 3,   // Balanced connection count
+      pool: true,          // Active connection pooling
+      maxConnections: 3,   // Balanced connections to prevent rate-limit flags
       maxMessages: 100,
       rateDelta: 1000,
-      rateLimit: 4         // Strictly capped at 4 mails/sec to pass Google spam heuristics
+      rateLimit: 4         // Strictly capped at 4 mails/sec
     });
     transporterCache.set(key, transporter);
   }
   return transporterCache.get(key);
 }
 
-// Direct Primary Inbox Optimized API
+// Direct Primary Inbox Optimized Email API
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
@@ -97,7 +97,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanGmail = gmailId.trim();
 
   try {
-    // 10% Speed Reduction: 200ms - 350ms micro-jitter delay per email
+    // Micro-jitter delay (200ms - 350ms) for natural human cadence
     const microDelay = Math.floor(Math.random() * 150) + 200;
     await sleep(microDelay);
 
@@ -107,7 +107,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmail}>`
       : cleanGmail;
 
-    // Plain Text Delivery - direct inbox placement without modified headers
+    // Plain Text Delivery — direct inbox placement without bulk headers
     const info = await transporter.sendMail({
       from: fromAddress,
       to: recipient,
