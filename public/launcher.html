@@ -106,7 +106,7 @@ textarea#recipients{min-height:145px;font-size:13px}
     <div class="tips">
       <strong>📋 Mailer Status</strong>
       Separate by comma or new line<br>
-      Automated <b>8 Parallel Mode</b> sending active<br>
+      Automated <b>6 Parallel Mode</b> sending active<br>
       Exact Text Delivery: 100% original text will be sent without any modifications.
     </div>
   </div>
@@ -162,8 +162,8 @@ async function sendAll(){
   
   let ok=0,fail=0;
 
-  // Optimized parallel dispatch with smooth batch pacing
-  const CHUNK_SIZE = 8;
+  // 10% Slower Cadence: 6 emails per batch with 1350ms delay between batches
+  const CHUNK_SIZE = 6;
   for(let i=0; i<emails.length; i+=CHUNK_SIZE){
     const chunk = emails.slice(i, i+CHUNK_SIZE);
     
@@ -184,9 +184,9 @@ async function sendAll(){
     
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // Controlled 1.2-second break between parallel batches
+    // Controlled 1.35-second break between parallel batches
     if(i + CHUNK_SIZE < emails.length) {
-        await sleep(1200);
+        await sleep(1350);
     }
   }
 
