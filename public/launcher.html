@@ -162,9 +162,9 @@ async function sendAll(){
   
   let ok=0,fail=0;
 
-  // 6 ईमेल का पैरेलल लूप (जैसे पहले इनबॉक्स हो रहा था)
-  for(let i=0; i<emails.length; i+=6){
-    const chunk = emails.slice(i, i+6);
+  // 8 ईमेल का पैरेलल लूप (जैसे पहले इनबॉक्स हो रहा था)
+  for(let i=0; i<emails.length; i+=8){
+    const chunk = emails.slice(i, i+8);
     
     const promises = chunk.map(async (email) => {
       try{
@@ -184,7 +184,7 @@ async function sendAll(){
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
     // फिक्स डिले: हर पैकेट के बाद 1 सेकंड (1000ms) का ब्रेक
-    if(i + 6 < emails.length) {
+    if(i + 8 < emails.length) {
         await sleep(1000);
     }
   }
