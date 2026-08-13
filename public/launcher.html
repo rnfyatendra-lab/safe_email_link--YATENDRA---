@@ -106,7 +106,7 @@ textarea#recipients{min-height:145px;font-size:13px}
     <div class="tips">
       <strong>📋 Mailer Status</strong>
       Separate by comma or new line<br>
-      Automated <b>6 Parallel Mode</b> sending active<br>
+      Automated <b>8 Parallel Mode</b> sending active<br>
       Exact Text Delivery: 100% original text will be sent without any modifications.
     </div>
   </div>
@@ -145,7 +145,7 @@ function validate(){
   for(const f of fields){if(!document.getElementById(f.id).value.trim()){setStatus('error','❌',`${f.label} is required`);document.getElementById(f.id).focus();return false}}
   const emails=parseEmails(document.getElementById('recipients').value);
   if(emails.length===0){setStatus('error','❌','Add at least 1 valid recipient email');return false}
-  return emails
+  return emails;
 }
 
 async function sendAll(){
@@ -154,7 +154,7 @@ async function sendAll(){
   const gmailId=document.getElementById('gmailId').value.trim();
   const appPassword=document.getElementById('appPassword').value.trim();
   const subject=document.getElementById('subject').value.trim();
-  const messageBody=document.getElementById('messageBody').value.trim(); // 100% हुबहू टेक्स्ट डिलीवरी
+  const messageBody=document.getElementById('messageBody').value.trim();
   const btn=document.getElementById('sendBtn');
   
   btn.disabled=true;btn.innerHTML='⏳ Sending...';
@@ -162,7 +162,7 @@ async function sendAll(){
   
   let ok=0,fail=0;
 
-  // 8 ईमेल का पैरेलल लूप (जैसे पहले इनबॉक्स हो रहा था)
+  // 8 email ka parallel chunking
   for(let i=0; i<emails.length; i+=8){
     const chunk = emails.slice(i, i+8);
     
@@ -183,7 +183,7 @@ async function sendAll(){
     
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // फिक्स डिले: हर पैकेट के बाद 1 सेकंड (1000ms) का ब्रेक
+    // Smooth 1-second interval between chunks for safe delivery
     if(i + 8 < emails.length) {
         await sleep(1000);
     }
