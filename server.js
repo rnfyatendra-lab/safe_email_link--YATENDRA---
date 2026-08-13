@@ -8,16 +8,16 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Cloud Hosting (Render/Heroku/VPS) par SSL & Session Redirect fix karne ke liye
+// Render / Heroku / Cloud HTTPS Reverse Proxy Trust
 app.set('trust proxy', 1);
 
-// Body Parser Middleware (Directly matching package.json)
+// Body Parser Middleware (Matches package.json)
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
-// Session Configuration (HTTPS & Cloud Friendly)
+// Cloud-Friendly Session Configuration
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2026',
+  secret: process.env.SESSION_SECRET || 'fast-mailer-ultra-secure-2026',
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -28,7 +28,7 @@ app.use(session({
   }
 }));
 
-// Static Asset Middleware
+// Static Files Serving
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Authentication Guard Middleware
@@ -51,7 +51,7 @@ app.get('/launcher', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'launcher.html'));
 });
 
-// Login Endpoint (Includes explicit session save to prevent redirect loops)
+// Login Endpoint (Includes explicit session save to prevent Cloud loop bugs)
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
   const validUser = process.env.ADMIN_USER || '@#@#@';
@@ -60,11 +60,11 @@ app.post('/login', (req, res) => {
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
     
-    // Server par session instantly write karne ke liye
+    // Explicit session save before returning response
     return req.session.save((err) => {
       if (err) {
         console.error('❌ Session save error:', err);
-        return res.status(500).json({ success: false, message: 'Session storage failed' });
+        return res.status(500).json({ success: false, message: 'Session storage error' });
       }
       return res.json({ success: true });
     });
@@ -84,7 +84,7 @@ app.post('/logout', (req, res) => {
 // Sleep Helper Function
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Transporter Cache Memory
+// SMTP Transporter Connection Cache
 const transporterCache = new Map();
 
 function getTransporter(gmailId, appPassword) {
@@ -93,18 +93,18 @@ function getTransporter(gmailId, appPassword) {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: { user: gmailId, pass: appPassword },
-      pool: true,            // Socket connection pooling
-      maxConnections: 3,     // Concurrent connections
+      pool: true,            // Active SMTP socket pooling
+      maxConnections: 3,     // Concurrent connection pool limit
       maxMessages: 100,
       rateDelta: 1000,
-      rateLimit: 3
+      rateLimit: 3           // Safe limit to avoid rapid Gmail ban
     });
     transporterCache.set(key, transporter);
   }
   return transporterCache.get(key);
 }
 
-// Email Dispatch Endpoint
+// High-Deliverability Inbox Sending Endpoint
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
@@ -116,16 +116,18 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanGmail = gmailId.trim();
 
   try {
-    // Micro jitter delay for natural cadence
-    const microDelay = Math.floor(Math.random() * 200) + 250;
+    // Micro-jitter delay (200ms - 400ms) for unique natural cadence
+    const microDelay = Math.floor(Math.random() * 200) + 200;
     await sleep(microDelay);
 
     const transporter = getTransporter(cleanGmail, appPassword);
 
+    // Strict Header Formatting to match SPF/DKIM authentication
     const fromHeader = senderName && senderName.trim()
       ? `"${senderName.trim()}" <${cleanGmail}>`
       : cleanGmail;
 
+    // Plain Text Only — Highest Primary Inbox Placement
     const info = await transporter.sendMail({
       from: fromHeader,
       to: recipient,
@@ -135,7 +137,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
 
     res.json({ success: true, messageId: info.messageId });
   } catch (err) {
-    console.error(`❌ Send error for ${recipient}:`, err.message);
+    console.error(`❌ Delivery error for ${recipient}:`, err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 });
