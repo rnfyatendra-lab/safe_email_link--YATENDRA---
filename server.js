@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
-// Secure Session Configuration
+// Session Configuration
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fast-mailer-ultra-secure-2026',
   resave: false,
@@ -26,13 +26,13 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Authentication Guard Middleware
+// Authentication Guard
 function requireLogin(req, res, next) {
   if (req.session?.loggedIn) return next();
   res.redirect('/');
 }
 
-// Routes
+// UI Routes
 app.get('/', (req, res) => {
   if (req.session?.loggedIn) return res.redirect('/launcher');
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
@@ -65,7 +65,7 @@ app.post('/logout', (req, res) => {
 // Sleep Helper
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Transporter Cache with Smooth Rate Limiting
+// Transporter Cache with Anti-Spam Rate Control
 const transporterCache = new Map();
 
 function getTransporter(gmailId, appPassword) {
@@ -74,18 +74,18 @@ function getTransporter(gmailId, appPassword) {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: { user: gmailId, pass: appPassword },
-      pool: true,            // SMTP socket pooling
-      maxConnections: 3,     // 3 active sockets
+      pool: true,            // Socket reuse
+      maxConnections: 2,     // Lower socket concurrency to avoid Google spam flags
       maxMessages: 100,
       rateDelta: 1000,
-      rateLimit: 3           // Strictly 3 mails/sec maximum to pass Google filters
+      rateLimit: 2           // Strictly 2 mails/sec to match human sending score
     });
     transporterCache.set(key, transporter);
   }
   return transporterCache.get(key);
 }
 
-// Primary Inbox Dispatch Endpoint
+// Direct Primary Inbox Optimized Endpoint
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
@@ -97,8 +97,8 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanGmail = gmailId.trim();
 
   try {
-    // 10% Slower Micro-Jitter (250ms - 450ms) per mail for natural cadence
-    const microDelay = Math.floor(Math.random() * 200) + 250;
+    // Micro-jitter delay (300ms - 600ms) per email for natural arrival timestamps
+    const microDelay = Math.floor(Math.random() * 300) + 300;
     await sleep(microDelay);
 
     const transporter = getTransporter(cleanGmail, appPassword);
@@ -107,7 +107,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmail}>`
       : cleanGmail;
 
-    // Plain Text Delivery (No extra HTML headers = 100% Primary Inbox Landing)
+    // Direct Plain-Text sending without bulk headers (Passed as personal email by Gmail AI)
     const info = await transporter.sendMail({
       from: fromHeader,
       to: recipient,
