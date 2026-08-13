@@ -8,21 +8,26 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware Setup
+// Body Parser Setup
 app.use(bodyParser.json({ limit: '5mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '5mb' }));
 
-// Session Configuration
+// Secure Session Configuration
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2026',
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false, maxAge: 1000 * 60 * 60 * 8 }
+  cookie: { 
+    httpOnly: true,
+    secure: false, 
+    maxAge: 1000 * 60 * 60 * 8 // 8 Hours
+  }
 }));
 
+// Static Asset Serving
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Authentication Guard
+// Authentication Guard Middleware
 function requireLogin(req, res, next) {
   if (req.session?.loggedIn) return next();
   res.redirect('/');
@@ -48,17 +53,21 @@ app.post('/login', (req, res) => {
     req.session.loggedIn = true;
     return res.json({ success: true });
   }
+
   res.status(401).json({ success: false, message: 'Invalid username or password' });
 });
 
 app.post('/logout', (req, res) => {
-  req.session.destroy(() => res.json({ success: true }));
+  req.session.destroy(() => {
+    res.clearCookie('connect.sid');
+    res.json({ success: true });
+  });
 });
 
-// Sleep Helper for Controlled Speed
+// Sleep Helper Function
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Transporter Cache with Connection Pooling
+// Cache Map for SMTP Transporters
 const transporterCache = new Map();
 
 function getTransporter(gmailId, appPassword) {
@@ -67,16 +76,20 @@ function getTransporter(gmailId, appPassword) {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: { user: gmailId, pass: appPassword },
-      pool: true,          // Active connection pooling
-      maxConnections: 3,   // Balanced connections to prevent rate-limit flags
-      maxMessages: 100
+      pool: true,             // Connection pooling for fast execution
+      maxConnections: 3,      // Parallel SMTP connections
+      maxMessages: 100,       // Connection reuse count
+      rateDelta: 1000,        // Time window (1 second)
+      rateLimit: 4,           // Max 4 emails/sec per connection (prevents Gmail spam triggers)
+      connectionTimeout: 10000,
+      socketTimeout: 30000
     });
     transporterCache.set(key, transporter);
   }
   return transporterCache.get(key);
 }
 
-// Optimized Direct Inbox Email API
+// Email Dispatch Endpoint (Primary Inbox Optimized)
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
@@ -85,27 +98,38 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   }
 
   const recipient = to.trim();
+  const cleanGmail = gmailId.trim();
 
   try {
-    // 10% Speed Reduction: 200ms - 300ms micro-jitter delay per email for natural human cadence
-    const microDelay = Math.floor(Math.random() * 150) + 200;
-    await sleep(microDelay);
+    // Micro-jitter delay (100ms - 200ms) to ensure unique timestamp cadence
+    const microJitter = Math.floor(Math.random() * 100) + 100;
+    await sleep(microJitter);
 
-    const transporter = getTransporter(gmailId, appPassword);
+    const transporter = getTransporter(cleanGmail, appPassword);
 
-    // Clean Plain Text configuration for Primary Inbox landing
-    await transporter.sendMail({
-      from: senderName ? `"${senderName.trim()}" <${gmailId.trim()}>` : `"${gmailId.trim()}" <${gmailId.trim()}>`,
+    // Exact sender matching to prevent SPF/DKIM spoofing flag
+    const fromHeader = senderName && senderName.trim() 
+      ? `"${senderName.trim()}" <${cleanGmail}>` 
+      : cleanGmail;
+
+    const mailOptions = {
+      from: fromHeader,
       to: recipient,
-      subject: subject || '',
-      text: messageBody
-    });
+      subject: subject ? subject.trim() : '',
+      text: messageBody,
+      headers: {
+        'X-Priority': '3',
+        'X-MSMail-Priority': 'Normal',
+        'Importance': 'Normal'
+      }
+    };
 
-    res.json({ success: true });
+    const info = await transporter.sendMail(mailOptions);
+    res.json({ success: true, messageId: info.messageId });
   } catch (err) {
-    console.error(`❌ Send Error (${recipient}):`, err.message);
+    console.error(`❌ Direct delivery failed for [${recipient}]:`, err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Fast Mailer listening on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Fast Mailer active on http://localhost:${PORT}`));
