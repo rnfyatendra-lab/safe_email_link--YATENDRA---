@@ -62,7 +62,7 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// Sleep Helper for Controlled Speed
+// Sleep Helper for Throttling
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Transporter Cache with Connection Pooling
@@ -74,11 +74,11 @@ function getTransporter(gmailId, appPassword) {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: { user: gmailId, pass: appPassword },
-      pool: true,          // Connection pooling for speed
-      maxConnections: 3,   // Balanced limits
+      pool: true,          // Connection pooling for stability
+      maxConnections: 3,   // Balanced connection count
       maxMessages: 100,
       rateDelta: 1000,
-      rateLimit: 5         // Max 5 mails/sec to keep connections healthy
+      rateLimit: 4         // Strictly capped at 4 mails/sec to pass Google spam heuristics
     });
     transporterCache.set(key, transporter);
   }
@@ -97,18 +97,17 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanGmail = gmailId.trim();
 
   try {
-    // Micro-jitter delay (100ms - 200ms) for unique timestamp cadence
-    const microDelay = Math.floor(Math.random() * 100) + 100;
+    // 10% Speed Reduction: 200ms - 350ms micro-jitter delay per email
+    const microDelay = Math.floor(Math.random() * 150) + 200;
     await sleep(microDelay);
 
     const transporter = getTransporter(cleanGmail, appPassword);
 
-    // Formatted sender name for proper display
     const fromAddress = senderName && senderName.trim()
       ? `"${senderName.trim()}" <${cleanGmail}>`
       : cleanGmail;
 
-    // Direct plain text send — No HTML modifications, exact user text
+    // Plain Text Delivery - direct inbox placement without modified headers
     const info = await transporter.sendMail({
       from: fromAddress,
       to: recipient,
