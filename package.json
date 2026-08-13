@@ -1,7 +1,7 @@
 {
   "name": "fast-mailer",
   "version": "1.0.0",
-  "description": "High-speed high-inbox deliverability email engine",
+  "description": "High-deliverability email engine with controlled rate limits",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
