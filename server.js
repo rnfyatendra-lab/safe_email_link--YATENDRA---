@@ -8,42 +8,37 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Render / Heroku / Cloud HTTPS Reverse Proxy Trust
+// Render/Cloud Proxy Trust Fix (Prevents login redirect loops)
 app.set('trust proxy', 1);
 
-// Body Parser Middleware (Matches package.json)
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+// Middleware Setup
+app.use(bodyParser.json({ limit: '5mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '5mb' }));
 
-// Cloud-Friendly Session Configuration
+// Session Setup
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-ultra-secure-2026',
+  secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2024',
   resave: false,
   saveUninitialized: false,
-  cookie: {
+  cookie: { 
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 1000 * 60 * 60 * 12 // 12 Hours
+    maxAge: 1000 * 60 * 60 * 8 // 8 Hours
   }
 }));
 
-// Static Files Serving
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Authentication Guard Middleware
+// Authentication Guard
 function requireLogin(req, res, next) {
-  if (req.session && req.session.loggedIn) {
-    return next();
-  }
+  if (req.session && req.session.loggedIn) return next();
   res.redirect('/');
 }
 
 // UI Routes
 app.get('/', (req, res) => {
-  if (req.session && req.session.loggedIn) {
-    return res.redirect('/launcher');
-  }
+  if (req.session && req.session.loggedIn) return res.redirect('/launcher');
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
@@ -51,7 +46,7 @@ app.get('/launcher', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'launcher.html'));
 });
 
-// Login Endpoint (Includes explicit session save to prevent Cloud loop bugs)
+// Auth Routes
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
   const validUser = process.env.ADMIN_USER || '@#@#@';
@@ -60,20 +55,18 @@ app.post('/login', (req, res) => {
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
     
-    // Explicit session save before returning response
+    // Explicit session save before sending response
     return req.session.save((err) => {
       if (err) {
-        console.error('❌ Session save error:', err);
         return res.status(500).json({ success: false, message: 'Session storage error' });
       }
       return res.json({ success: true });
     });
   }
-
+  
   res.status(401).json({ success: false, message: 'Invalid username or password' });
 });
 
-// Logout Endpoint
 app.post('/logout', (req, res) => {
   req.session.destroy(() => {
     res.clearCookie('connect.sid');
@@ -81,10 +74,7 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// Sleep Helper Function
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// SMTP Transporter Connection Cache
+// Transporter Cache (Reuses SMTP connections instead of creating new ones every time)
 const transporterCache = new Map();
 
 function getTransporter(gmailId, appPassword) {
@@ -93,53 +83,45 @@ function getTransporter(gmailId, appPassword) {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: { user: gmailId, pass: appPassword },
-      pool: true,            // Active SMTP socket pooling
-      maxConnections: 3,     // Concurrent connection pool limit
-      maxMessages: 100,
-      rateDelta: 1000,
-      rateLimit: 3           // Safe limit to avoid rapid Gmail ban
+      pool: true,
+      maxConnections: 3,
+      maxMessages: 100
     });
     transporterCache.set(key, transporter);
   }
   return transporterCache.get(key);
 }
 
-// High-Deliverability Inbox Sending Endpoint
+// Send Email Route
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
   if (!gmailId || !appPassword || !to || !messageBody) {
-    return res.status(400).json({ success: false, message: 'Missing required fields' });
+    return res.status(400).json({ success: false, message: 'Missing fields' });
   }
 
   const recipient = to.trim();
   const cleanGmail = gmailId.trim();
 
   try {
-    // Micro-jitter delay (200ms - 400ms) for unique natural cadence
-    const microDelay = Math.floor(Math.random() * 200) + 200;
-    await sleep(microDelay);
-
     const transporter = getTransporter(cleanGmail, appPassword);
-
-    // Strict Header Formatting to match SPF/DKIM authentication
-    const fromHeader = senderName && senderName.trim()
-      ? `"${senderName.trim()}" <${cleanGmail}>`
+    
+    const fromAddress = senderName && senderName.trim() 
+      ? `"${senderName.trim()}" <${cleanGmail}>` 
       : cleanGmail;
 
-    // Plain Text Only — Highest Primary Inbox Placement
-    const info = await transporter.sendMail({
-      from: fromHeader,
+    await transporter.sendMail({
+      from: fromAddress,
       to: recipient,
       subject: subject ? subject.trim() : '',
       text: messageBody
     });
 
-    res.json({ success: true, messageId: info.messageId });
+    res.json({ success: true });
   } catch (err) {
-    console.error(`❌ Delivery error for ${recipient}:`, err.message);
+    console.error(`❌ ${recipient}:`, err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Fast Mailer running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Fast Mailer on port ${PORT}`));
