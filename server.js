@@ -8,7 +8,7 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware setup using body-parser
+// Body parser configuration
 app.use(bodyParser.json({ limit: '5mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '5mb' }));
 
@@ -23,10 +23,10 @@ app.use(session({
   }
 }));
 
-// Static files route
+// Serve static frontend files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Authentication Guard Middleware
+// Login Middleware
 function requireLogin(req, res, next) {
   if (req.session?.loggedIn) return next();
   res.redirect('/');
@@ -42,11 +42,11 @@ app.get('/launcher', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'launcher.html'));
 });
 
-// Login API Endpoint
+// Authentication Routes
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  const validUser = process.env.ADMIN_USER || '@#@#@##';
-  const validPass = process.env.ADMIN_PASS || '@#@#@##';
+  const validUser = process.env.ADMIN_USER || '@#@#@';
+  const validPass = process.env.ADMIN_PASS || '@#@#@';
 
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
@@ -56,7 +56,6 @@ app.post('/login', (req, res) => {
   res.status(401).json({ success: false, message: 'Invalid username or password' });
 });
 
-// Logout API Endpoint
 app.post('/logout', (req, res) => {
   req.session.destroy(() => {
     res.clearCookie('connect.sid');
@@ -64,10 +63,7 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// Sleep helper function for controlled delay
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// Transporter Cache
+// Transporter Cache: Keeps connection alive for high speed
 const transporterCache = new Map();
 
 function getTransporter(gmailId, appPassword) {
@@ -75,14 +71,17 @@ function getTransporter(gmailId, appPassword) {
   if (!transporterCache.has(key)) {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
-      auth: { user: gmailId, pass: appPassword }
+      auth: { user: gmailId, pass: appPassword },
+      pool: true,          // Connection pooling for fast delivery
+      maxConnections: 5,   // Parallel connection pool
+      maxMessages: 100
     });
     transporterCache.set(key, transporter);
   }
   return transporterCache.get(key);
 }
 
-// Send Email API Endpoint
+// Direct Inbox Email Sending Endpoint
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
@@ -93,12 +92,9 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const recipient = to.trim();
 
   try {
-    // 0.5 se 1.2 second ka light delay (Fast speed + Anti-spam safe zone)
-    const randomDelay = Math.floor(Math.random() * 700) + 500;
-    await sleep(randomDelay);
-
     const transporter = getTransporter(gmailId, appPassword);
 
+    // Exact text format without bulk headers = Natural Inbox Delivery
     const mailOptions = {
       from: senderName ? `"${senderName.trim()}" <${gmailId.trim()}>` : `"${gmailId.trim()}" <${gmailId.trim()}>`,
       to: recipient,
@@ -109,9 +105,9 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
     const info = await transporter.sendMail(mailOptions);
     res.json({ success: true, messageId: info.messageId });
   } catch (err) {
-    console.error(`❌ Send error to ${recipient}:`, err.message);
+    console.error(`❌ Delivery error [${recipient}]:`, err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Server active on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Mailer active on http://localhost:${PORT}`));
