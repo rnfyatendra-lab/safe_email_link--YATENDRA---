@@ -8,11 +8,11 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Body parser setup
+// Middleware setup using body-parser
 app.use(bodyParser.json({ limit: '5mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '5mb' }));
 
-// Session setup
+// Session management
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2026',
   resave: false,
@@ -45,8 +45,8 @@ app.get('/launcher', requireLogin, (req, res) => {
 // Login API Endpoint
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  const validUser = process.env.ADMIN_USER || '@#@#@';
-  const validPass = process.env.ADMIN_PASS || '@#@#@';
+  const validUser = process.env.ADMIN_USER || '@#@#@##';
+  const validPass = process.env.ADMIN_PASS || '@#@#@##';
 
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
@@ -64,7 +64,7 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// Helper function: Artificial delay add karne ke liye
+// Sleep helper function for controlled delay
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Transporter Cache
@@ -76,7 +76,6 @@ function getTransporter(gmailId, appPassword) {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: { user: gmailId, pass: appPassword }
-      // Aggressive pooling hata di gayi hai taaki natural connection bane
     });
     transporterCache.set(key, transporter);
   }
@@ -94,8 +93,8 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const recipient = to.trim();
 
   try {
-    // 1.5 se 3 second ka human-like delay taaki spam filter trigger na ho
-    const randomDelay = Math.floor(Math.random() * 1500) + 1500;
+    // 0.5 se 1.2 second ka light delay (Fast speed + Anti-spam safe zone)
+    const randomDelay = Math.floor(Math.random() * 700) + 500;
     await sleep(randomDelay);
 
     const transporter = getTransporter(gmailId, appPassword);
@@ -104,7 +103,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       from: senderName ? `"${senderName.trim()}" <${gmailId.trim()}>` : `"${gmailId.trim()}" <${gmailId.trim()}>`,
       to: recipient,
       subject: subject || '',
-      text: messageBody // Plain text format for personal email delivery
+      text: messageBody
     };
 
     const info = await transporter.sendMail(mailOptions);
