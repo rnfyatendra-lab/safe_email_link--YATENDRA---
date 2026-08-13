@@ -1,6 +1,7 @@
 {
   "name": "fast-mailer",
   "version": "1.0.0",
+  "description": "High-deliverability fast email sender application",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
