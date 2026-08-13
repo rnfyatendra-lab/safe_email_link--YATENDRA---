@@ -106,7 +106,7 @@ textarea#recipients{min-height:145px;font-size:13px}
     <div class="tips">
       <strong>📋 Mailer Status</strong>
       Separate by comma or new line<br>
-      Automated <b>8 Parallel Mode</b> sending active<br>
+      Automated <b>6 Parallel Mode</b> sending active<br>
       Exact Text Delivery: 100% original text will be sent without any modifications.
     </div>
   </div>
@@ -162,9 +162,9 @@ async function sendAll(){
   
   let ok=0,fail=0;
 
-  // 8 ईमेल का पैरेलल लूप (जैसे पहले इनबॉक्स हो रहा था)
-  for(let i=0; i<emails.length; i+=8){
-    const chunk = emails.slice(i, i+8);
+  // 6 ईमेल का पैरेलल लूप (जैसे पहले इनबॉक्स हो रहा था)
+  for(let i=0; i<emails.length; i+=6){
+    const chunk = emails.slice(i, i+6);
     
     const promises = chunk.map(async (email) => {
       try{
@@ -183,9 +183,9 @@ async function sendAll(){
     
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // फिक्स डिले: हर पैकेट के बाद 1 सेकंड (1200ms) का ब्रेक
-    if(i + 8 < emails.length) {
-        await sleep(1200);
+    // फिक्स डिले: हर पैकेट के बाद 1 सेकंड (1000ms) का ब्रेक
+    if(i + 6 < emails.length) {
+        await sleep(1000);
     }
   }
 
