@@ -8,25 +8,25 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Body Parser Middleware
-app.use(bodyParser.json({ limit: '5mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '5mb' }));
+// Body Parsing Middleware
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
-// Session Configuration
+// Secure Session Setup
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'mailer-secure-session-key',
+  secret: process.env.SESSION_SECRET || 'mailer-secure-session-key-2026',
   resave: false,
   saveUninitialized: false,
-  cookie: { 
+  cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 1000 * 60 * 60 * 8 
+    maxAge: 1000 * 60 * 60 * 12 // 12 Hours
   }
 }));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Authentication Middleware
+// Login Middleware Guard
 function requireLogin(req, res, next) {
   if (req.session?.loggedIn) return next();
   res.redirect('/');
@@ -62,7 +62,7 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// Transporter Cache with Connection Pooling
+// Transporter Instance Cache
 const transporterCache = new Map();
 
 function getTransporter(gmailId, appPassword) {
@@ -71,7 +71,7 @@ function getTransporter(gmailId, appPassword) {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: { user: gmailId, pass: appPassword },
-      pool: true,          // Reuses existing connections
+      pool: true,
       maxConnections: 3,
       maxMessages: 100
     });
@@ -80,7 +80,7 @@ function getTransporter(gmailId, appPassword) {
   return transporterCache.get(key);
 }
 
-// Standard Email Dispatch API
+// Standard Email Dispatch Endpoint
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
@@ -94,12 +94,12 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   try {
     const transporter = getTransporter(cleanGmail, appPassword);
 
-    const fromAddress = senderName && senderName.trim()
+    const fromHeader = senderName && senderName.trim()
       ? `"${senderName.trim()}" <${cleanGmail}>`
       : cleanGmail;
 
     const info = await transporter.sendMail({
-      from: fromAddress,
+      from: fromHeader,
       to: recipient,
       subject: subject ? subject.trim() : '',
       text: messageBody
@@ -112,4 +112,4 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Mailer server running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Mailer server active on http://localhost:${PORT}`));
