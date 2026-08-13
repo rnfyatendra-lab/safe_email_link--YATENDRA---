@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fast Mailer — Dashboard</title>
+<title>Fast Mailer — Launcher</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -104,7 +104,7 @@ textarea#recipients{min-height:150px;font-size:13px}
     <div class="tips">
       <strong>📋 DISPATCH ENGINE ACTIVE</strong>
       Delimiters supported: comma or new line<br>
-      Standard Plain-Text Sending Enabled
+      Standard Plain-Text Sending Active
     </div>
   </div>
 </div>
@@ -159,23 +159,33 @@ async function sendAll(){
   
   let ok=0,fail=0;
 
-  for(let i=0; i<emails.length; i++){
-    const email = emails[i];
-    try{
-      const res=await fetch('/api/send-email',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody,to:email})
-      });
-      const d=await res.json();
-      if(res.ok&&d.success){ok++;addLog('ok','✅',`Delivered → ${email}`)}
-      else{fail++;addLog('fail','❌',`Failed → ${email}`)}
-    }catch{fail++;addLog('fail','❌',`Network Error → ${email}`)}
+  const BATCH_SIZE = 3;
+  for(let i=0; i<emails.length; i+=BATCH_SIZE){
+    const chunk = emails.slice(i, i+BATCH_SIZE);
+    
+    const promises = chunk.map(async (email) => {
+      try{
+        const res=await fetch('/api/send-email',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody,to:email})
+        });
+        const d=await res.json();
+        if(res.ok&&d.success){ok++;addLog('ok','✅',`Delivered → ${email}`)}
+        else{fail++;addLog('fail','❌',`Failed → ${email}`)}
+      }catch{fail++;addLog('fail','❌',`Network Error → ${email}`)}
+    });
 
-    setProgress(i + 1, emails.length);
+    await Promise.all(promises);
+    
+    setProgress(Math.min(i + chunk.length, emails.length), emails.length);
+    
+    if(i + BATCH_SIZE < emails.length) {
+      await sleep(1500);
+    }
   }
 
-  if(fail===0){setStatus('success','🎉',`All ${ok} emails processed!`);addLog('ok','✅',`${ok} emails sent`)}
+  if(fail===0){setStatus('success','🎉',`All ${ok} emails delivered!`);addLog('ok','✅',`${ok} emails delivered`)}
   else if(ok===0){setStatus('error','💥',`All ${fail} failed. Check Gmail credentials.`);addLog('fail','❌',`All failed`)}
   else{setStatus('sending','⚠️',`${ok} sent, ${fail} failed`);addLog('ok','✅',`${ok} delivered`);addLog('fail','❌',`${fail} failed`)}
   addLog('info','📊',`Total: ${emails.length}  ·  ✅ ${ok} Success  ·  ❌ ${fail} Failed`);
