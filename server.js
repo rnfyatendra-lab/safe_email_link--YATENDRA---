@@ -8,11 +8,11 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware setup using body-parser
+// Body parser setup
 app.use(bodyParser.json({ limit: '5mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '5mb' }));
 
-// Session management
+// Session setup
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2026',
   resave: false,
@@ -64,7 +64,10 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// Fast Transporter Cache Mechanism
+// Helper function: Artificial delay add karne ke liye
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Transporter Cache
 const transporterCache = new Map();
 
 function getTransporter(gmailId, appPassword) {
@@ -72,10 +75,8 @@ function getTransporter(gmailId, appPassword) {
   if (!transporterCache.has(key)) {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
-      auth: { user: gmailId, pass: appPassword },
-      pool: true,         // Fast bulk mailing connection reuse
-      maxConnections: 5,  // Parallel processing
-      maxMessages: 100
+      auth: { user: gmailId, pass: appPassword }
+      // Aggressive pooling hata di gayi hai taaki natural connection bane
     });
     transporterCache.set(key, transporter);
   }
@@ -93,13 +94,17 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const recipient = to.trim();
 
   try {
+    // 1.5 se 3 second ka human-like delay taaki spam filter trigger na ho
+    const randomDelay = Math.floor(Math.random() * 1500) + 1500;
+    await sleep(randomDelay);
+
     const transporter = getTransporter(gmailId, appPassword);
 
     const mailOptions = {
       from: senderName ? `"${senderName.trim()}" <${gmailId.trim()}>` : `"${gmailId.trim()}" <${gmailId.trim()}>`,
       to: recipient,
       subject: subject || '',
-      text: messageBody
+      text: messageBody // Plain text format for personal email delivery
     };
 
     const info = await transporter.sendMail(mailOptions);
