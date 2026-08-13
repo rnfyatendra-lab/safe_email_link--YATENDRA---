@@ -106,7 +106,7 @@ textarea#recipients{min-height:145px;font-size:13px}
     <div class="tips">
       <strong>📋 Mailer Status</strong>
       Separate by comma or new line<br>
-      Automated <b>5 Parallel Mode</b> sending active<br>
+      Automated <b>8 Parallel Mode</b> sending active<br>
       Exact Text Delivery: 100% original text will be sent without any modifications.
     </div>
   </div>
@@ -162,8 +162,8 @@ async function sendAll(){
   
   let ok=0,fail=0;
 
-  // 10% Speed Reduction: 5 emails per batch with 1200ms delay between chunks
-  const CHUNK_SIZE = 5;
+  // 10% Speed Reduction: 8 emails per batch with 1200ms delay between chunks
+  const CHUNK_SIZE = 8;
   for(let i=0; i<emails.length; i+=CHUNK_SIZE){
     const chunk = emails.slice(i, i+CHUNK_SIZE);
     
