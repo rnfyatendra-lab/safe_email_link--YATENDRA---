@@ -87,8 +87,8 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const recipient = to.trim();
 
   try {
-    // 10% Speed Reduction: 150ms - 250ms micro-jitter delay per email for natural human cadence
-    const microDelay = Math.floor(Math.random() * 100) + 150;
+    // 10% Speed Reduction: 200ms - 300ms micro-jitter delay per email for natural human cadence
+    const microDelay = Math.floor(Math.random() * 150) + 200;
     await sleep(microDelay);
 
     const transporter = getTransporter(gmailId, appPassword);
