@@ -7,61 +7,61 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{min-height:100vh;background:#f0f2f5;font-family:'Inter',sans-serif;color:#1e293b;padding:24px}
+body{min-height:100vh;background:#fcf8f8;font-family:'Inter',sans-serif;color:#1e293b;padding:24px}
 .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;background:#fff;padding:16px 24px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.04)}
 .logo{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:700;color:#0f172a}
-.logo span{color:#4f46e5}
+.logo span{color:#dc2626}
 .logout-btn{padding:9px 20px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;color:#475569;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s}
-.logout-btn:hover{border-color:#ef4444;color:#ef4444;background:#fef2f2}
+.logout-btn:hover{border-color:#dc2626;color:#dc2626;background:#fef2f2}
 .status-bar{display:flex;align-items:center;gap:12px;padding:14px 22px;background:#fff;border:1.5px solid #cbd5e1;border-radius:12px;margin-bottom:22px;transition:all 0.3s}
 .status-bar.success{border-color:#86efac;background:#f0fdf4}
 .status-bar.error{border-color:#fca5a5;background:#fef2f2}
-.status-bar.sending{border-color:#a5b4fc;background:#eef2ff}
+.status-bar.sending{border-color:#fca5a5;background:#fff1f2}
 .status-icon{font-size:20px}
 .status-text{font-size:14px;font-weight:600;color:#334155}
 .status-bar.success .status-text{color:#166534}
 .status-bar.error .status-text{color:#991b1b}
-.status-bar.sending .status-text{color:#3730a3}
+.status-bar.sending .status-text{color:#991b1b}
 .main-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:22px}
 .card{background:#fff;border:1.5px solid #e2e8f0;border-radius:18px;padding:26px;box-shadow:0 4px 15px rgba(0,0,0,0.02)}
-.card-title{font-size:12px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:20px}
+.card-title{font-size:12px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:20px}
 .field{margin-bottom:16px}
 .field label{display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:8px}
 .field input,.field textarea{width:100%;padding:13px 16px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;color:#0f172a;font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:all 0.2s;resize:none}
-.field input:focus,.field textarea:focus{border-color:#4f46e5;background:#fff;box-shadow:0 0 0 4px rgba(79,70,229,0.1)}
+.field input:focus,.field textarea:focus{border-color:#dc2626;background:#fff;box-shadow:0 0 0 4px rgba(220,38,38,0.1)}
 .field input::placeholder,.field textarea::placeholder{color:#94a3b8}
 textarea#messageBody{min-height:120px}
 textarea#recipients{min-height:150px;font-size:13px}
 .pass-wrap{position:relative}
 .pass-wrap input{padding-right:48px}
 .toggle-pass{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:#94a3b8;cursor:pointer;font-size:18px;padding:4px}
-.toggle-pass:hover{color:#4f46e5}
+.toggle-pass:hover{color:#dc2626}
 .rec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.badge{font-size:11px;font-weight:700;padding:4px 12px;background:#4f46e5;color:#fff;border-radius:20px}
-.tips{padding:15px;background:#f1f5f9;border:1.5px solid #e2e8f0;border-radius:12px;font-size:12px;color:#64748b;line-height:1.8;margin-top:16px}
-.tips strong{color:#334155;display:block;margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:0.8px;font-weight:700}
-.tips b{color:#4f46e5}
+.badge{font-size:11px;font-weight:700;padding:4px 12px;background:#dc2626;color:#fff;border-radius:20px}
+.tips{padding:15px;background:#fff1f2;border:1.5px solid #fecdd3;border-radius:12px;font-size:12px;color:#9f1239;line-height:1.8;margin-top:16px}
+.tips strong{color:#881337;display:block;margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:0.8px;font-weight:700}
+.tips b{color:#dc2626}
 .progress-wrap{display:none;align-items:center;gap:16px;padding:16px 22px;background:#fff;border:1.5px solid #cbd5e1;border-radius:14px;margin-bottom:22px}
 .progress-bar{flex:1;height:10px;background:#f1f5f9;border-radius:10px;overflow:hidden}
-.progress-fill{height:100%;background:linear-gradient(90deg,#4f46e5,#7c3aed);border-radius:10px;width:0%;transition:width 0.3s ease}
-.progress-text{font-size:13px;font-weight:600;color:#4f46e5;white-space:nowrap}
+.progress-fill{height:100%;background:linear-gradient(90deg,#ef4444,#b91c1c);border-radius:10px;width:0%;transition:width 0.3s ease}
+.progress-text{font-size:13px;font-weight:600;color:#dc2626;white-space:nowrap}
 .action-row{display:flex;gap:14px;margin-bottom:22px}
-.send-btn{flex:1;padding:16px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px}
-.send-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 24px rgba(79,70,229,0.35)}
+.send-btn{flex:1;padding:16px;background:linear-gradient(135deg,#ef4444,#dc2626);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.send-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 24px rgba(220,38,38,0.35)}
 .send-btn:disabled{opacity:0.6;cursor:not-allowed;transform:none}
 .clear-btn{padding:16px 24px;background:#fff;border:1.5px solid #cbd5e1;border-radius:12px;color:#475569;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s}
-.clear-btn:hover{border-color:#ef4444;color:#ef4444}
+.clear-btn:hover{border-color:#dc2626;color:#dc2626}
 .log-box{display:none;background:#fff;border:1.5px solid #cbd5e1;border-radius:16px;overflow:hidden}
 .log-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1.5px solid #f1f5f9;background:#f8fafc}
-.log-title{font-size:12px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:1px}
+.log-title{font-size:12px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:1px}
 .log-clear{background:none;border:none;color:#94a3b8;font-size:13px;cursor:pointer;font-weight:600}
-.log-clear:hover{color:#ef4444}
+.log-clear:hover{color:#dc2626}
 .log-list{padding:14px;max-height:230px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
 .log-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:500;animation:logIn 0.2s ease both}
 @keyframes logIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
 .log-item.ok{background:#f0fdf4;color:#166534}
 .log-item.fail{background:#fef2f2;color:#991b1b}
-.log-item.info{background:#eff6ff;color:#1e40af}
+.log-item.info{background:#fff1f2;color:#9f1239}
 @media(max-width:768px){.main-grid{grid-template-columns:1fr}body{padding:16px}}
 </style>
 </head>
@@ -79,7 +79,7 @@ textarea#recipients{min-height:150px;font-size:13px}
 
 <div class="main-grid">
   <div class="card">
-    <div class="card-title">⚙️ Sender Configuration</div>
+    <div class="card-title">⚙️ SENDER CONFIGURATION</div>
     <div class="field"><label>Sender Name</label><input id="senderName" type="text" placeholder="e.g. Rahul Sharma"></div>
     <div class="field"><label>Gmail ID</label><input id="gmailId" type="email" placeholder="you@gmail.com"></div>
     <div class="field">
@@ -94,7 +94,7 @@ textarea#recipients{min-height:150px;font-size:13px}
   </div>
 
   <div class="card">
-    <div class="card-title">👥 Email Recipients</div>
+    <div class="card-title">👥 EMAIL RECIPIENTS</div>
     <div class="field">
       <div class="rec-header">
         <label>Email List</label>
@@ -103,10 +103,10 @@ textarea#recipients{min-height:150px;font-size:13px}
       <textarea id="recipients" placeholder="Paste emails here:&#10;&#10;user1@gmail.com&#10;user2@yahoo.com, user3@outlook.com" oninput="countRecipients()"></textarea>
     </div>
     <div class="tips">
-      <strong>📋 Dispatch Engine Active</strong>
+      <strong>📋 DISPATCH ENGINE ACTIVE</strong>
       Delimiters supported: comma or new line<br>
-      High-Speed <b>4 Parallel Throttled Mode</b> active<br>
-      Strict Plain-Text Format: 100% Primary Inbox Landing Guarantee
+      High-Deliverability <b>Safe Smart Cadence</b> active<br>
+      Strict Plain-Text Format: 100% Primary Inbox Delivery Optimized
     </div>
   </div>
 </div>
@@ -123,7 +123,7 @@ textarea#recipients{min-height:150px;font-size:13px}
 
 <div class="log-box" id="logBox">
   <div class="log-header">
-    <span class="log-title">📋 Execution Logs</span>
+    <span class="log-title">📋 EXECUTION LOGS</span>
     <button class="log-clear" onclick="clearLog()">✕ Clear</button>
   </div>
   <div class="log-list" id="logList"></div>
@@ -161,8 +161,8 @@ async function sendAll(){
   
   let ok=0,fail=0;
 
-  // 10% Slower Batch Cadence: 4 emails per batch with 1600ms inter-batch pause
-  const BATCH_SIZE = 4;
+  // Primary Inbox Landing Optimization: 3 emails per batch with 2.2s human-like pause
+  const BATCH_SIZE = 3;
   for(let i=0; i<emails.length; i+=BATCH_SIZE){
     const chunk = emails.slice(i, i+BATCH_SIZE);
     
@@ -183,9 +183,8 @@ async function sendAll(){
     
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // Controlled 1.6-second pause between batches for smooth delivery
     if(i + BATCH_SIZE < emails.length) {
-      await sleep(1600);
+      await sleep(2200);
     }
   }
 
