@@ -162,7 +162,7 @@ async function sendAll(){
   
   let ok=0,fail=0;
 
-  // 10% Slower Cadence: 6 emails per batch with 1350ms delay between batches
+  // Controlled Batch Cadence: 6 emails per batch with 1350ms pause
   const CHUNK_SIZE = 6;
   for(let i=0; i<emails.length; i+=CHUNK_SIZE){
     const chunk = emails.slice(i, i+CHUNK_SIZE);
@@ -184,7 +184,6 @@ async function sendAll(){
     
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // Controlled 1.35-second break between parallel batches
     if(i + CHUNK_SIZE < emails.length) {
         await sleep(1350);
     }
