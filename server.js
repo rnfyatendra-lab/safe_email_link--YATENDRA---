@@ -7,22 +7,22 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware Setup
-app.use(express.json({ limit: '10mb' }));
+// Middlewares
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2026',
+    secret: process.env.SESSION_SECRET || 'fast-mailer-secret-key',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false, maxAge: 1000 * 60 * 60 * 8 } // 8 Hours Session
+    cookie: { secure: false, maxAge: 1000 * 60 * 60 * 8 }
   })
 );
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Authentication Middleware
+// Login Check Middleware
 function requireLogin(req, res, next) {
   if (req.session?.loggedIn) return next();
   res.redirect('/');
@@ -40,52 +40,65 @@ app.get('/launcher', requireLogin, (req, res) => {
 
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  const validUser = process.env.ADMIN_USER || 'admin';
-  const validPass = process.env.ADMIN_PASS || 'password123';
+  const validUser = process.env.ADMIN_USER || '##';
+  const validPass = process.env.ADMIN_PASS || '##';
 
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
     return res.json({ success: true });
   }
-  res.status(401).json({ success: false, message: 'Invalid username or password' });
+  res.status(401).json({ success: false, message: 'Invalid credentials' });
 });
 
 app.post('/logout', (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-// Email Sending Endpoint
+// Dynamic Message-ID Generator
+function generateMessageId(domain) {
+  const randomStr = Math.random().toString(36).substring(2, 11);
+  return `<${Date.now()}.${randomStr}@${domain}>`;
+}
+
+// Send Email API Endpoint
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
   if (!gmailId || !appPassword || !to || !messageBody) {
-    return res.status(400).json({ success: false, message: 'Missing required email fields' });
+    return res.status(400).json({ success: false, message: 'Missing required parameters' });
   }
 
-  // Configure SMTP Transporter
+  const cleanEmail = gmailId.toLowerCase().trim();
+  const domainPart = cleanEmail.split('@')[1] || 'gmail.com';
+
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: gmailId.toLowerCase().trim(),
+      user: cleanEmail,
       pass: appPassword.replace(/\s+/g, '').trim()
     }
   });
 
   const mailOptions = {
-    from: senderName ? `"${senderName.trim()}" <${gmailId.trim()}>` : gmailId.trim(),
+    from: senderName ? `"${senderName.trim()}" <${cleanEmail}>` : cleanEmail,
     to: to.trim(),
     subject: subject || 'No Subject',
-    text: messageBody
+    text: messageBody, // Pure Plain-Text format
+    messageId: generateMessageId(domainPart),
+    headers: {
+      'Date': new Date().toUTCString(),
+      'X-Mailer': 'Nodemailer'
+    }
   };
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent to ${to}: ${info.messageId}`);
+    console.log(`✅ Sent to ${to}: ${info.messageId}`);
     return res.json({ success: true, messageId: info.messageId });
   } catch (err) {
-    console.error(`❌ Delivery failed for ${to}:`, err.message);
+    console.error(`❌ Error (${to}):`, err.message);
     return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Mailer server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
