@@ -183,9 +183,9 @@ async function sendAll(){
     
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // फिक्स डिले: हर पैकेट के बाद 1 सेकंड (1000ms) का ब्रेक
+    // फिक्स डिले: हर पैकेट के बाद 1 सेकंड (1200ms) का ब्रेक
     if(i + 8 < emails.length) {
-        await sleep(1000);
+        await sleep(1200);
     }
   }
 
