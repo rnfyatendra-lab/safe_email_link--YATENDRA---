@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2026',
+  secret: process.env.SESSION_SECRET || 'safe-mailer-secret-2026',
   resave: false,
   saveUninitialized: false,
   cookie: { secure: false, maxAge: 1000 * 60 * 60 * 8 }
@@ -34,7 +34,6 @@ app.get('/launcher', requireLogin, (req, res) => {
 
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  const validUser = process.env.ADMIN_USER || '@#@#@';
   const validPass = process.env.ADMIN_PASS || '@#@#@';
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
