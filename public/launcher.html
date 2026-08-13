@@ -105,7 +105,7 @@ textarea#recipients{min-height:150px;font-size:13px}
     <div class="tips">
       <strong>📋 Dispatch Engine Active</strong>
       Delimiters supported: comma or new line<br>
-      High-Speed <b>Adaptive Batch Mode</b> active<br>
+      High-Speed <b>4 Parallel Throttled Mode</b> active<br>
       Strict Plain-Text Format: 100% Primary Inbox Landing Guarantee
     </div>
   </div>
@@ -161,8 +161,8 @@ async function sendAll(){
   
   let ok=0,fail=0;
 
-  // Optimized parallel batching (5 per batch with 1.2s inter-batch pause)
-  const BATCH_SIZE = 5;
+  // 10% Slower Batch Cadence: 4 emails per batch with 1600ms inter-batch pause
+  const BATCH_SIZE = 4;
   for(let i=0; i<emails.length; i+=BATCH_SIZE){
     const chunk = emails.slice(i, i+BATCH_SIZE);
     
@@ -183,8 +183,9 @@ async function sendAll(){
     
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
+    // Controlled 1.6-second pause between batches for smooth delivery
     if(i + BATCH_SIZE < emails.length) {
-      await sleep(1200);
+      await sleep(1600);
     }
   }
 
