@@ -8,7 +8,7 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Reverse proxy trust for Render / Cloud hosting
+// Cloud / Reverse Proxy Support (Render/HTTPS session fix)
 app.set('trust proxy', 1);
 
 app.use(bodyParser.json({ limit: '10mb' }));
@@ -22,13 +22,13 @@ app.use(session({
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 1000 * 60 * 60 * 8
+    maxAge: 1000 * 60 * 60 * 12
   }
 }));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Clean SMTP Pool without aggressive socket overloading
+// Persistent Transporter Pool (Low Concurrency = High Trust)
 const transporterPool = new Map();
 
 function getTransporter(user, pass) {
@@ -40,7 +40,7 @@ function getTransporter(user, pass) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     pool: true,
-    maxConnections: 2, // Natural connection limit
+    maxConnections: 2, // Natural, non-aggressive socket limit
     maxMessages: 100,
     auth: { user, pass }
   });
@@ -54,6 +54,7 @@ function requireLogin(req, res, next) {
   res.redirect('/');
 }
 
+// UI Routes
 app.get('/', (req, res) => {
   if (req.session && req.session.loggedIn) return res.redirect('/launcher');
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
@@ -63,15 +64,16 @@ app.get('/launcher', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'launcher.html'));
 });
 
+// Authentication Endpoints
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
   const validUser = process.env.ADMIN_USER || '@#@#@';
   const validPass = process.env.ADMIN_PASS || '@#@#@';
-  
+
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
     return req.session.save((err) => {
-      if (err) return res.status(500).json({ success: false, message: 'Session error' });
+      if (err) return res.status(500).json({ success: false, message: 'Session storage error' });
       res.json({ success: true });
     });
   }
@@ -85,12 +87,14 @@ app.post('/logout', (req, res) => {
   });
 });
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // Standard RFC-Compliant Mail Dispatcher
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
-  
+
   if (!gmailId || !appPassword || !to || !messageBody) {
-    return res.status(400).json({ success: false, message: 'Missing fields' });
+    return res.status(400).json({ success: false, message: 'Missing required parameters' });
   }
 
   const cleanGmailId  = gmailId.trim();
@@ -98,13 +102,17 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanTo       = to.trim();
 
   try {
+    // 300ms - 600ms micro-jitter for unique human arrival stamps
+    const microDelay = Math.floor(Math.random() * 300) + 300;
+    await sleep(microDelay);
+
     const transporter = getTransporter(cleanGmailId, cleanPassword);
 
     const fromFormatted = senderName && senderName.trim()
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    // Standard mail object: Let Google sign headers natively
+    // Direct plain text: No custom headers so Google signs authentic DKIM
     const info = await transporter.sendMail({
       from: fromFormatted,
       to: cleanTo,
