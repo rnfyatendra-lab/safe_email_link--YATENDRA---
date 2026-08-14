@@ -13,7 +13,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-ultra-inbox-key-2024',
+  secret: process.env.SESSION_SECRET || 'fast-mailer-ultra-secure-inbox-key',
   resave: false,
   saveUninitialized: false,
   cookie: { secure: false, maxAge: 1000 * 60 * 60 * 24 }
@@ -21,7 +21,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Persistent Warm Socket Pool (Ultra Fast + High IP Trust)
+// Persistent Warm Socket Pool
 const transporterPool = new Map();
 
 function getTransporter(user, pass) {
@@ -33,14 +33,9 @@ function getTransporter(user, pass) {
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
-    secure: true, // SSL Direct TLS
-    pool: true,   // Keeps 6 active sockets open
-    maxConnections: 6,
-    maxMessages: 2000,
+    secure: true, // SSL
     auth: { user, pass },
-    tls: {
-      rejectUnauthorized: false
-    }
+    tls: { rejectUnauthorized: false }
   });
 
   transporterPool.set(cacheKey, transporter);
@@ -52,7 +47,6 @@ function requireLogin(req, res, next) {
   res.redirect('/');
 }
 
-// Web UI Routes
 app.get('/', (req, res) => {
   if (req.session?.loggedIn) return res.redirect('/launcher');
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
@@ -77,7 +71,7 @@ app.post('/logout', (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-// Single Direct Delivery Route - 100% Primary Inbox Landing
+// Direct Primary Inbox Delivery Route
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
   
@@ -101,13 +95,17 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
+    // Body with dynamic reference to make every email 100% unique (Bypasses Spam filter)
+    const rawBody = (messageBody || '').trim();
+    const finalBody = `${rawBody}\n\n---\nRef: #${entropy.toUpperCase()}`;
+
     // Direct 1-on-1 Personal Transmission
     const info = await transporter.sendMail({
       from: fromHeader,
       to: cleanTo,
       replyTo: cleanGmailId,
       subject: subject || 'Message',
-      text: (messageBody || '').trim(),
+      text: finalBody,
       messageId: customMessageId,
       date: new Date(),
       encoding: 'utf-8',
@@ -134,4 +132,4 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Fast Mailer Ultra-Inbox Engine live on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Fast Mailer Safe Inbox Engine live on port ${PORT}`));
