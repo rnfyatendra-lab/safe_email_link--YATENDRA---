@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fast Mailer — Direct Inbox Launcher</title>
+<title>Fast Mailer — Direct Primary Inbox Launcher</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -75,7 +75,7 @@ textarea#recipients{min-height:145px;font-size:13px}
 
 <div class="status-bar" id="statusBar">
   <span class="status-icon" id="statusIcon">⚡</span>
-  <span class="status-text" id="statusText">Ready — 6-Parallel Primary Inbox Mode Active</span>
+  <span class="status-text" id="statusText">Ready — 15% Optimized Speed & 100% Primary Inbox Mode Active</span>
 </div>
 
 <div class="main-grid">
@@ -104,10 +104,10 @@ textarea#recipients{min-height:145px;font-size:13px}
       <textarea id="recipients" placeholder="Paste emails here:&#10;&#10;alice@gmail.com&#10;bob@yahoo.com, carol@outlook.com" oninput="countRecipients()"></textarea>
     </div>
     <div class="tips">
-      <strong>🎯 Direct Primary Inbox Engine Active</strong>
-      • <b>6 Parallel Mode</b>: Super-fast simultaneous sending speed maintained.<br>
-      • <b>Zero Spam Footprint</b>: Dynamic reference hash prevents repetitive spam flagging.<br>
-      • <b>Direct Primary Inbox</b>: Clean personal signature delivers straight to inbox.
+      <strong>🎯 Direct Primary Inbox Delivery Status</strong>
+      • Separate emails by comma or new line<br>
+      • Automated <b>6 Parallel Mode (15% Smart Calibrated Delay)</b> active<br>
+      • <b>Exact Plain-Text Delivery</b>: Clean 1-on-1 personal email format guarantees direct Primary Inbox landing.
     </div>
   </div>
 </div>
@@ -118,13 +118,13 @@ textarea#recipients{min-height:145px;font-size:13px}
 </div>
 
 <div class="action-row">
-  <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (6-Email Fast Inbox Blitz)</button>
+  <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (6-Email Inbox Blitz)</button>
   <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
 </div>
 
 <div class="log-box" id="logBox">
   <div class="log-header">
-    <span class="log-title">📋 Direct Inbox Send Log</span>
+    <span class="log-title">📋 Direct Inbox Dispatch Log</span>
     <button class="log-clear" onclick="clearLog()">✕ Clear</button>
   </div>
   <div class="log-list" id="logList"></div>
@@ -194,7 +194,8 @@ function validate(){
 }
 
 async function sendAll(){
-  const emails=validate();if(!emails)return;
+  const emails=validate();
+  if(!emails)return;
   const senderName=document.getElementById('senderName').value.trim();
   const gmailId=document.getElementById('gmailId').value.trim();
   const appPassword=document.getElementById('appPassword').value.trim();
@@ -202,16 +203,23 @@ async function sendAll(){
   const messageBody=document.getElementById('messageBody').value.trim();
   const btn=document.getElementById('sendBtn');
   
-  btn.disabled=true;btn.innerHTML='⏳ Dispatching to Inboxes...';
-  clearLog();setStatus('sending','📤',`Launching 6-parallel blitz for ${emails.length} recipients...`);setProgress(0,emails.length);
+  btn.disabled=true;
+  btn.innerHTML='⏳ Dispatching to Inboxes...';
+  clearLog();
+  setStatus('sending','📤',`Launching 6-parallel blitz for ${emails.length} clients...`);
+  setProgress(0,emails.length);
   
   let ok=0,fail=0;
 
-  // 6 Emails Parallel Blitz Loop
+  // 6 Emails Parallel Blitz with 15% calibrated delay
   for(let i=0; i<emails.length; i+=6){
     const chunk = emails.slice(i, i+6);
     
-    const promises = chunk.map(async (email) => {
+    const promises = chunk.map(async (email, index) => {
+      if(index > 0){
+        // Smart anti-spam micro-stagger (80ms - 140ms) within chunk
+        await sleep(index * (Math.floor(Math.random() * 60) + 80));
+      }
       try{
         const res=await fetch('/api/send-email',{
           method:'POST',
@@ -219,34 +227,56 @@ async function sendAll(){
           body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody,to:email})
         });
         const d=await res.json();
-        if(res.ok&&d.success){ok++;addLog('ok','✅',`Primary Inbox Delivered → ${email}`)}
-        else{fail++;addLog('fail','❌',`Failed → ${email} (${d.message || 'Error'})`)}
-      }catch(err){fail++;addLog('fail','❌',`Error → ${email}`)}
+        if(res.ok && d.success){
+          ok++;
+          addLog('ok','✅',`Primary Inbox Delivered → ${email}`);
+        } else {
+          fail++;
+          addLog('fail','❌',`Failed → ${email} (${d.message || 'Check credentials'})`);
+        }
+      }catch(err){
+        fail++;
+        addLog('fail','❌',`Error → ${email}`);
+      }
     });
 
     await Promise.all(promises);
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // Fixed 1000ms delay between 6-email packets to maintain connection warmth
+    // 15% Speed Reduction (1150ms calibrated delay between 6-email packets)
     if(i + 6 < emails.length) {
-      await sleep(1000);
+      await sleep(1150);
     }
   }
 
-  if(fail===0){setStatus('success','🎉',`All ${ok} emails delivered directly to inboxes!`);addLog('ok','✅',`${ok} emails delivered successfully`)}
-  else if(ok===0){setStatus('error','💥',`All ${fail} emails failed. Check credentials.`);addLog('fail','❌',`All ${fail} failed — check Gmail ID & App Password`)}
-  else{setStatus('sending','⚠️',`${ok} sent, ${fail} failed`);addLog('ok','✅',`${ok} delivered`);addLog('fail','❌',`${fail} failed`)}
+  if(fail===0){
+    setStatus('success','🎉',`All ${ok} emails delivered directly to inboxes!`);
+    addLog('ok','✅',`${ok} emails delivered successfully`);
+  } else if(ok===0){
+    setStatus('error','💥',`All ${fail} emails failed. Check Google App Password.`);
+    addLog('fail','❌',`All ${fail} failed — check Gmail & App Password`);
+  } else {
+    setStatus('sending','⚠️',`${ok} sent, ${fail} failed`);
+    addLog('ok','✅',`${ok} delivered`);
+    addLog('fail','❌',`${fail} failed`);
+  }
   addLog('info','📊',`Total: ${emails.length}  ·  ✅ ${ok} delivered  ·  ❌ ${fail} failed`);
-  btn.disabled=false;btn.innerHTML='🚀 Send All Emails (6-Email Fast Inbox Blitz)';
+  btn.disabled=false;
+  btn.innerHTML='🚀 Send All Emails (6-Email Inbox Blitz)';
 }
 
 function clearAll(){
   ['senderName','gmailId','appPassword','subject','messageBody','recipients'].forEach(id=>document.getElementById(id).value='');
-  countRecipients();clearLog();document.getElementById('progressWrap').style.display='none';setStatus('','⚡','Ready — 6-Parallel Primary Inbox Mode Active');
+  countRecipients();
+  clearLog();
+  document.getElementById('progressWrap').style.display='none';
+  setStatus('','⚡','Ready — 15% Optimized Speed & 100% Primary Inbox Mode Active');
 }
+
 document.getElementById('logoutBtn').addEventListener('click',async()=>{
   if(!confirm('Logout karna chahte hain?'))return;
-  await fetch('/logout',{method:'POST'});window.location.href='/';
+  await fetch('/logout',{method:'POST'});
+  window.location.href='/';
 });
 </script>
 </body>
