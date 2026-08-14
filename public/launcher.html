@@ -106,8 +106,8 @@ textarea#recipients{min-height:145px;font-size:13px}
     <div class="field">
       <label>Sending Mode (Inbox Protection)</label>
       <select id="sendPacing">
-        <option value="safe" selected>🛡️ Safe Inbox Mode (1s - 1.1s Smart Human Delay - Highest Inbox Rate)</option>
-        <option value="moderate">⚡ Moderate Mode (0.80s Delay)</option>
+        <option value="safe" selected>🛡️ Safe Inbox Mode (0.80s - 0.90s Smart Human Delay - Highest Inbox Rate)</option>
+        <option value="moderate">⚡ Moderate Mode (0.50s Delay)</option>
       </select>
     </div>
     <div class="tips">
@@ -196,8 +196,8 @@ async function sendAll(){
     // Natural human delay between emails to protect IP reputation & guarantee inbox delivery
     if(i < emails.length - 1){
       const delayMs = pacingMode === 'safe' 
-        ? Math.floor(Math.random() * 250) + 400  // 1s to 1.1s random human jitter
-        : 250; // 1s moderate delay
+        ? Math.floor(Math.random() * 100) + 100 // 0.80s to 0.90s random human jitter
+        : 100; // 0.50s moderate delay
       await sleep(delayMs);
     }
   }
