@@ -35,7 +35,7 @@ app.get('/launcher', requireLogin, (req, res) => {
 
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  const validUser = process.env.ADMIN_USER || 'admin';
+  const validUser = process.env.ADMIN_USER || 'admin123';
   const validPass = process.env.ADMIN_PASS || 'admin123';
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
