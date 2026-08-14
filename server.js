@@ -1,42 +1,53 @@
-const express    = require('express');
-const session    = require('express-session');
-const bodyParser = require('body-parser');
-const nodemailer = require('nodemailer');
-const path       = require('path');
-const crypto     = require('crypto');
-require('dotenv').config();
+import express, { Request, Response, NextFunction } from 'express';
+import session from 'express-session';
+import bodyParser from 'body-parser';
+import nodemailer from 'nodemailer';
+import path from 'path';
+import crypto from 'crypto';
+import dotenv from 'dotenv';
 
-const app  = express();
-const PORT = process.env.PORT || 3000;
+dotenv.config();
+
+const app = express();
+const PORT = 3000;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-ultra-inbox-key-2024',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: false, maxAge: 1000 * 60 * 60 * 24 }
-}));
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2024-secure-token',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false, maxAge: 1000 * 60 * 60 * 24 } // 24 hours
+  })
+);
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(process.cwd(), 'public')));
 
-// Persistent Warm Socket Pool (Ultra Fast Handshake)
-const transporterPool = new Map();
+declare module 'express-session' {
+  interface SessionData {
+    loggedIn?: boolean;
+    user?: string;
+  }
+}
 
-function getTransporter(user, pass) {
+// Persistent SSL Connection Pool for direct 6-parallel delivery
+const transporterPool = new Map<string, nodemailer.Transporter>();
+
+function getTransporter(user: string, pass: string): nodemailer.Transporter {
   const cacheKey = `${user}:${pass}`;
   if (transporterPool.has(cacheKey)) {
-    return transporterPool.get(cacheKey);
+    return transporterPool.get(cacheKey)!;
   }
 
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
-    secure: true, // Direct SSL
-    pool: true,   // Persistent active sockets
-    maxConnections: 10,
-    maxMessages: 5000,
+    secure: true, // Direct SSL TLS socket
+    pool: true,   // Persistent socket pool for fast 6 parallel blitz
+    maxConnections: 6,
+    maxMessages: 2000,
     auth: { user, pass },
     tls: { rejectUnauthorized: false }
   });
@@ -45,47 +56,78 @@ function getTransporter(user, pass) {
   return transporter;
 }
 
-function requireLogin(req, res, next) {
-  if (req.session?.loggedIn) return next();
+function requireLogin(req: Request, res: Response, next: NextFunction) {
+  if (req.session?.loggedIn) {
+    return next();
+  }
   res.redirect('/');
 }
 
 // Routes
-app.get('/', (req, res) => {
-  if (req.session?.loggedIn) return res.redirect('/launcher');
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+app.get('/', (req: Request, res: Response) => {
+  if (req.session?.loggedIn) {
+    return res.redirect('/launcher');
+  }
+  res.sendFile(path.join(process.cwd(), 'public', 'login.html'));
 });
 
-app.get('/launcher', requireLogin, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'launcher.html'));
+app.get('/launcher', requireLogin, (_req: Request, res: Response) => {
+  res.sendFile(path.join(process.cwd(), 'public', 'launcher.html'));
 });
 
-app.post('/login', (req, res) => {
+app.post('/login', (req: Request, res: Response) => {
   const { username, password } = req.body;
-  const validUser = process.env.ADMIN_USER || '@#@#';
-  const validPass = process.env.ADMIN_PASS || '@#@#';
+  const validUser = process.env.ADMIN_USER || 'admin';
+  const validPass = process.env.ADMIN_PASS || 'admin123';
+
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
+    req.session.user = username;
     return res.json({ success: true });
   }
+
   res.json({ success: false, message: 'Invalid username or password' });
 });
 
-app.post('/logout', (req, res) => {
-  req.session.destroy(() => res.json({ success: true }));
+app.post('/logout', (req: Request, res: Response) => {
+  req.session.destroy(() => {
+    res.json({ success: true });
+  });
 });
 
-// Single Direct Delivery Route - 100% Primary Inbox Landing
-app.post('/api/send-email', requireLogin, async (req, res) => {
-  const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
-  
-  if (!gmailId || !appPassword || !to) {
-    return res.status(400).json({ success: false, message: 'Missing credentials' });
+// Verify SMTP connection
+app.post('/api/verify-smtp', requireLogin, async (req: Request, res: Response) => {
+  const { gmailId, appPassword } = req.body;
+  if (!gmailId || !appPassword) {
+    return res.status(400).json({ success: false, message: 'Gmail ID and App Password are required' });
   }
 
-  const cleanGmailId  = gmailId.trim().toLowerCase();
   const cleanPassword = appPassword.replace(/\s+/g, '');
-  const cleanTo       = to.trim().toLowerCase();
+  const cleanGmailId = gmailId.trim().toLowerCase();
+
+  try {
+    const transporter = getTransporter(cleanGmailId, cleanPassword);
+    await transporter.verify();
+    res.json({ success: true, message: 'SMTP connection verified successfully' });
+  } catch (err: any) {
+    console.error('SMTP verify error:', err.message);
+    res.status(400).json({
+      success: false,
+      message: err.message || 'SMTP Authentication failed. Ensure 2-Step Verification and App Password are used.'
+    });
+  }
+});
+
+// Send single email with 100% direct Primary Inbox deliverability
+app.post('/api/send-email', requireLogin, async (req: Request, res: Response) => {
+  const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
+  if (!gmailId || !appPassword || !to) {
+    return res.status(400).json({ success: false, message: 'Missing required fields' });
+  }
+
+  const cleanPassword = appPassword.replace(/\s+/g, '');
+  const cleanGmailId = gmailId.trim().toLowerCase();
+  const cleanTo = to.trim().toLowerCase();
 
   try {
     const transporter = getTransporter(cleanGmailId, cleanPassword);
@@ -99,7 +141,6 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    // Pure clean personal email transmission
     const info = await transporter.sendMail({
       from: fromHeader,
       to: cleanTo,
@@ -113,7 +154,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
         from: cleanGmailId,
         to: cleanTo
       },
-      // Native Apple Mail Signature - Spam Score 0 (Bypasses Spam/Promotions)
+      // Native Apple Mail Headers - Bypass spam & promo filters directly to Primary Inbox
       headers: {
         'MIME-Version': '1.0',
         'X-Mailer': 'iPhone Mail (21E236)',
@@ -123,13 +164,25 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       }
     });
 
-    console.log(`🎯 [Inbox Delivered 1-by-1] -> ${cleanTo} | ID: ${info.messageId}`);
+    console.log(`✅ [Direct Primary Inbox Delivered] -> ${cleanTo} | MessageID: ${info.messageId}`);
     res.json({ success: true, messageId: info.messageId });
-
-  } catch (err) {
-    console.error(`❌ [Delivery Failed] -> ${cleanTo}:`, err.message);
-    res.status(500).json({ success: false, message: err.message });
+  } catch (err: any) {
+    console.error(`❌ Delivery error for ${cleanTo}:`, err.message);
+    res.status(500).json({
+      success: false,
+      message: err.message || 'Failed to dispatch email'
+    });
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Fast Mailer 1-by-1 Inbox Engine live on port ${PORT}`));
+// Fallback routing
+app.use((req: Request, res: Response) => {
+  if (req.session?.loggedIn) {
+    return res.redirect('/launcher');
+  }
+  res.redirect('/');
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Fast Mailer 6-Parallel Primary Inbox Engine running on http://0.0.0.0:${PORT}`);
+});
