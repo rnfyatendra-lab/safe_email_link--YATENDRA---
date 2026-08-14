@@ -32,10 +32,10 @@ body{min-height:100vh;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)
   <div class="logo">
     <span class="logo-icon">📧</span>
     <div class="logo-title">Fast<span>Mailer</span></div>
-    <div class="subtitle">Direct Primary Inbox Portal</div>
+    <div class="subtitle">Sign in to launch your campaigns</div>
   </div>
-  <div class="field"><label>Username</label><input id="username" type="text" placeholder="Enter username (Default: admin)"></div>
-  <div class="field"><label>Password</label><input id="password" type="password" placeholder="Enter password (Default: admin123)"></div>
+  <div class="field"><label>Username</label><input id="username" type="text" placeholder="Enter your username"></div>
+  <div class="field"><label>Password</label><input id="password" type="password" placeholder="Enter your password"></div>
   <button class="btn" id="loginBtn">Sign In →</button>
   <div class="status" id="status"></div>
 </div>
@@ -48,7 +48,7 @@ async function doLogin(){
   try{
     const r=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
     const d=await r.json();
-    if(d.success){st.className='status success';st.textContent='✅ Login successful!';setTimeout(()=>window.location.href='/launcher',600)}
+    if(d.success){st.className='status success';st.textContent='✅ Login successful!';setTimeout(()=>window.location.href='/launcher',700)}
     else{st.className='status error';st.textContent='❌ '+(d.message||'Invalid credentials');btn.disabled=false;btn.textContent='Sign In →'}
   }catch(e){st.className='status error';st.textContent='❌ Connection error';btn.disabled=false;btn.textContent='Sign In →'}
 }
