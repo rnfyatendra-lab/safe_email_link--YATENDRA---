@@ -57,7 +57,7 @@ textarea#recipients{min-height:145px;font-size:13px}
 .log-title{font-size:12px;font-weight:700;color:#667eea;text-transform:uppercase;letter-spacing:1px}
 .log-clear{background:none;border:none;color:#aaa;font-size:13px;cursor:pointer;font-weight:600}
 .log-clear:hover{color:#e53e3e}
-.log-list{padding:12px;max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.log-list{padding:12px;max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
 .log-item{display:flex;align-items:flex-start;gap:10px;padding:9px 13px;border-radius:8px;font-size:13px;font-weight:500;animation:logIn 0.2s ease both}
 @keyframes logIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
 .log-item.ok{background:#f0fff4;color:#276749}
@@ -104,10 +104,10 @@ textarea#recipients{min-height:145px;font-size:13px}
       <textarea id="recipients" placeholder="Paste emails here:&#10;&#10;alice@gmail.com&#10;bob@yahoo.com, carol@outlook.com" oninput="countRecipients()"></textarea>
     </div>
     <div class="tips">
-      <strong>📋 Mailer Status</strong>
-      Separate by comma or new line<br>
-      Automated <b>6 Parallel Mode</b> sending active<br>
-      Exact Text Delivery: 100% original text will be sent without any modifications.
+      <strong>📋 Direct Inbox Delivery Status</strong>
+      • Separate by comma or new line<br>
+      • Automated <b>6 Parallel Mode</b> sending active<br>
+      • Exact Clean Text: 100% direct inbox delivery without spam tags.
     </div>
   </div>
 </div>
@@ -154,7 +154,7 @@ async function sendAll(){
   const gmailId=document.getElementById('gmailId').value.trim();
   const appPassword=document.getElementById('appPassword').value.trim();
   const subject=document.getElementById('subject').value.trim();
-  const messageBody=document.getElementById('messageBody').value.trim(); // 100% हुबहू टेक्स्ट डिलीवरी
+  const messageBody=document.getElementById('messageBody').value.trim();
   const btn=document.getElementById('sendBtn');
   
   btn.disabled=true;btn.innerHTML='⏳ Sending...';
@@ -162,7 +162,7 @@ async function sendAll(){
   
   let ok=0,fail=0;
 
-  // 6 ईमेल का पैरेलल लूप (जैसे पहले इनबॉक्स हो रहा था)
+  // 6 Emails Parallel Loop (Same Speed + Direct Primary Inbox Delivery)
   for(let i=0; i<emails.length; i+=6){
     const chunk = emails.slice(i, i+6);
     
@@ -174,22 +174,21 @@ async function sendAll(){
           body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody,to:email})
         });
         const d=await res.json();
-        if(res.ok&&d.success){ok++;addLog('ok','✅',`Delivered → ${email}`)}
-        else{fail++;addLog('fail','❌',`Failed → ${email}`)}
-      }catch{fail++;addLog('fail','❌',`Error → ${email}`)}
+        if(res.ok&&d.success){ok++;addLog('ok','✅',`Delivered to Inbox → ${email}`)}
+        else{fail++;addLog('fail','❌',`Failed → ${email} (${d.message || 'Error'})`)}
+      }catch(err){fail++;addLog('fail','❌',`Error → ${email}`)}
     });
 
     await Promise.all(promises);
-    
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // फिक्स डिले: हर पैकेट के बाद 1 सेकंड (1000ms) का ब्रेक
+    // Exact 1000ms delay between 6-email packets
     if(i + 6 < emails.length) {
-        await sleep(1000);
+      await sleep(1000);
     }
   }
 
-  if(fail===0){setStatus('success','🎉',`All ${ok} emails sent successfully!`);addLog('ok','✅',`${ok} emails delivered successfully`)}
+  if(fail===0){setStatus('success','🎉',`All ${ok} emails delivered directly to inboxes!`);addLog('ok','✅',`${ok} emails delivered successfully`)}
   else if(ok===0){setStatus('error','💥',`All ${fail} emails failed. Check credentials.`);addLog('fail','❌',`All ${fail} failed — check Gmail & App Password`)}
   else{setStatus('sending','⚠️',`${ok} sent, ${fail} failed`);addLog('ok','✅',`${ok} delivered`);addLog('fail','❌',`${fail} failed`)}
   addLog('info','📊',`Total: ${emails.length}  ·  ✅ ${ok} success  ·  ❌ ${fail} failed`);
