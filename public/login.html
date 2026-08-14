@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fast Mailer — Login</title>
+<title>Fast Mailer — Direct Inbox Login</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -13,12 +13,12 @@ body{min-height:100vh;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)
 .logo-icon{font-size:48px;display:block;margin-bottom:10px}
 .logo-title{font-size:26px;font-weight:700;color:#1a1a2e}
 .logo-title span{color:#667eea}
-.subtitle{color:#888;font-size:14px;margin-top:6px}
+.subtitle{color:#64748b;font-size:14px;margin-top:6px}
 .field{margin-bottom:18px}
 .field label{display:block;font-size:13px;font-weight:600;color:#333;margin-bottom:7px}
 .field input{width:100%;padding:13px 16px;background:#f5f6ff;border:2px solid #dde1ff;border-radius:10px;color:#1a1a2e;font-family:'Inter',sans-serif;font-size:15px;outline:none;transition:all 0.2s}
 .field input:focus{border-color:#667eea;background:#fff;box-shadow:0 0 0 4px rgba(102,126,234,0.15)}
-.field input::placeholder{color:#bbb}
+.field input::placeholder{color:#94a3b8}
 .btn{width:100%;padding:14px;margin-top:4px;background:linear-gradient(135deg,#667eea,#764ba2);border:none;border-radius:10px;color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s}
 .btn:hover{transform:translateY(-1px);box-shadow:0 8px 25px rgba(102,126,234,0.5)}
 .btn:disabled{opacity:0.6;cursor:not-allowed;transform:none}
@@ -32,7 +32,7 @@ body{min-height:100vh;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)
   <div class="logo">
     <span class="logo-icon">📧</span>
     <div class="logo-title">Fast<span>Mailer</span></div>
-    <div class="subtitle">Direct Client Inbox Dispatcher</div>
+    <div class="subtitle">Direct Primary Inbox Dispatcher</div>
   </div>
   <div class="field"><label>Username</label><input id="username" type="text" placeholder="Enter username"></div>
   <div class="field"><label>Password</label><input id="password" type="password" placeholder="Enter password"></div>
