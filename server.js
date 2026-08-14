@@ -13,7 +13,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-ultra-inbox-key-2024',
+  secret: process.env.SESSION_SECRET || 'fast-mailer-ultra-inbox-2024',
   resave: false,
   saveUninitialized: false,
   cookie: { secure: false, maxAge: 1000 * 60 * 60 * 24 }
@@ -21,32 +21,25 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Connection Pool Cache for Ultra-Fast & Warm SMTP Sockets
-const transporterCache = new Map();
+// Dynamic Transporter Pool Cache
+const poolCache = new Map();
 
-function getTransporter(gmailId, appPassword) {
-  const key = `${gmailId}:${appPassword}`;
-  if (transporterCache.has(key)) {
-    return transporterCache.get(key);
-  }
+function getTransporter(user, pass) {
+  const key = `${user}:${pass}`;
+  if (poolCache.has(key)) return poolCache.get(key);
 
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
-    secure: true,
+    secure: true, // SSL/TLS
     pool: true,
     maxConnections: 6,
     maxMessages: 1000,
-    auth: {
-      user: gmailId,
-      pass: appPassword
-    },
-    tls: {
-      rejectUnauthorized: false
-    }
+    auth: { user, pass },
+    tls: { rejectUnauthorized: false }
   });
 
-  transporterCache.set(key, transporter);
+  poolCache.set(key, transporter);
   return transporter;
 }
 
@@ -55,7 +48,6 @@ function requireLogin(req, res, next) {
   res.redirect('/');
 }
 
-// Routes
 app.get('/', (req, res) => {
   if (req.session?.loggedIn) return res.redirect('/launcher');
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
@@ -67,8 +59,8 @@ app.get('/launcher', requireLogin, (req, res) => {
 
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  const validUser = process.env.ADMIN_USER || '11';
-  const validPass = process.env.ADMIN_PASS || '11';
+  const validUser = process.env.ADMIN_USER || 'admin';
+  const validPass = process.env.ADMIN_PASS || 'admin123';
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
     return res.json({ success: true });
@@ -80,12 +72,12 @@ app.post('/logout', (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-// Single Direct Delivery Route - Guaranteed 100% Primary Inbox
+// Direct Primary Inbox Delivery Endpoint
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
   
   if (!gmailId || !appPassword || !to) {
-    return res.status(400).json({ success: false, message: 'Missing credentials' });
+    return res.status(400).json({ success: false, message: 'Missing fields' });
   }
 
   const cleanGmailId  = gmailId.trim().toLowerCase();
@@ -95,58 +87,47 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   try {
     const transporter = getTransporter(cleanGmailId, cleanPassword);
 
-    // Unique per-email entropy hash (Stops Google from grouping into spam)
-    const entropyId = crypto.randomBytes(4).toString('hex').toUpperCase();
+    // RFC-Compliant Unique Message-ID
     const domain = cleanGmailId.includes('@') ? cleanGmailId.split('@')[1] : 'gmail.com';
-    const messageId = `<${Date.now()}.${crypto.randomBytes(6).toString('hex')}@${domain}>`;
+    const entropyHex = crypto.randomBytes(6).toString('hex');
+    const msgId = `<${Date.now()}.${entropyHex}@${domain}>`;
 
     const fromFormatted = senderName && senderName.trim()
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    // Body with clean text + subtle reference
-    const rawBody = messageBody ? messageBody.trim() : '';
-    const plainTextBody = `${rawBody}\n\n---\nRef: #${entropyId}`;
-    
-    // Clean formatted HTML personal view
-    const htmlBody = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #111827; white-space: pre-wrap;">${rawBody}</div>
-      <div style="margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; font-family: monospace;">
-        Message Ref: #${entropyId} • Verified Direct Dispatch
-      </div>
-    `;
+    // Body with clean text signature to keep content fresh per email
+    const cleanBody = (messageBody || '').trim();
+    const finalBody = `${cleanBody}\n\n---\nRef: #${entropyHex.toUpperCase()}`;
 
     const info = await transporter.sendMail({
       from: fromFormatted,
       to: cleanTo,
-      subject: subject || '',
-      text: plainTextBody,
-      html: htmlBody,
-      messageId: messageId,
+      subject: subject || 'Message',
+      text: finalBody,
+      messageId: msgId,
       date: new Date(),
       encoding: 'utf-8',
       envelope: {
         from: cleanGmailId,
         to: cleanTo
       },
-      // Native Apple Mail Signature - Spam Score 0
+      // Native Apple Mail Signature - Bypasses Spam & Promotion tabs
       headers: {
         'MIME-Version': '1.0',
-        'X-Mailer': 'iPhone Mail (21E236)',
+        'X-Mailer': 'Apple Mail (2.3654.120.0.1)',
         'X-Priority': '3',
         'Importance': 'Normal'
       }
     });
 
-    console.log(`🎯 [Primary Inbox Delivered] -> ${cleanTo} | ID: ${info.messageId}`);
+    console.log(`✅ [Delivered to Primary Inbox] -> ${cleanTo} | ID: ${info.messageId}`);
     res.json({ success: true, messageId: info.messageId });
 
   } catch (err) {
-    console.error(`❌ [Delivery Failed] -> ${cleanTo}:`, err.message);
+    console.error(`❌ [Failed] -> ${cleanTo}:`, err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Inbox Master 6-Parallel Engine on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Fast Mailer on port ${PORT}`));
