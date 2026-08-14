@@ -1,7 +1,6 @@
 {
-  "name": "inbox-master-dispatcher",
-  "version": "2.0.0",
-  "description": "High deliverability 6-parallel mailer with dynamic footer rotation",
+  "name": "fast-mailer",
+  "version": "1.0.0",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
