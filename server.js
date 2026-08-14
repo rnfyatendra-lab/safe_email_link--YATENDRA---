@@ -1,21 +1,24 @@
-const express    = require('express');
-const session    = require('express-session');
-const bodyParser = require('body-parser');
+const express = require('express');
+const session = require('express-session');
 const nodemailer = require('nodemailer');
-const path       = require('path');
+const path = require('path');
 require('dotenv').config();
 
-const app  = express();
+const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2024',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: false, maxAge: 1000 * 60 * 60 * 8 }
-}));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'fast-mailer-secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false, maxAge: 1000 * 60 * 60 * 8 }
+  })
+);
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 function requireLogin(req, res, next) {
@@ -34,13 +37,14 @@ app.get('/launcher', requireLogin, (req, res) => {
 
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  const validUser = process.env.ADMIN_USER || '########';
-  const validPass = process.env.ADMIN_PASS || '########';
+  const validUser = process.env.ADMIN_USER || '##';
+  const validPass = process.env.ADMIN_PASS || '##';
+
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
     return res.json({ success: true });
   }
-  res.json({ success: false, message: 'Invalid username or password' });
+  res.status(401).json({ success: false, message: 'Invalid credentials' });
 });
 
 app.post('/logout', (req, res) => {
@@ -49,28 +53,35 @@ app.post('/logout', (req, res) => {
 
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
-  if (!gmailId || !appPassword || !to)
+
+  if (!gmailId || !appPassword || !to || !messageBody) {
     return res.status(400).json({ success: false, message: 'Missing fields' });
+  }
+
+  const cleanEmail = gmailId.toLowerCase().trim();
+  const cleanPassword = appPassword.replace(/\s+/g, '').trim();
 
   const transporter = nodemailer.createTransport({
     service: 'gmail',
-    auth: { user: gmailId, pass: appPassword }
+    auth: {
+      user: cleanEmail,
+      pass: cleanPassword
+    }
   });
 
+  const mailOptions = {
+    from: senderName ? `"${senderName.trim()}" <${cleanEmail}>` : cleanEmail,
+    to: to.trim(),
+    subject: subject || 'No Subject',
+    text: messageBody
+  };
+
   try {
-    await transporter.sendMail({
-      from: senderName ? `"${senderName}" <${gmailId}>` : `"${gmailId}" <${gmailId}>`,
-      to,
-      subject,
-      text: messageBody
-      // HTML nahi — plain text = personal email = Primary inbox
-      // Koi bulk/newsletter headers nahi
-    });
-    res.json({ success: true });
+    const info = await transporter.sendMail(mailOptions);
+    return res.json({ success: true, messageId: info.messageId });
   } catch (err) {
-    console.error(`❌ ${to}:`, err.message);
-    res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Fast Mailer on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
