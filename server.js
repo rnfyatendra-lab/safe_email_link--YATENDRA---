@@ -10,9 +10,9 @@ const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
 
-// Image/PNG payload ke liye body-parser limit 25MB ki gayi hai
-app.use(bodyParser.json({ limit: '25mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '25mb' }));
+// Inline Base64 images ke liye 50MB payload limit
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2026',
@@ -28,7 +28,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Transporter pool for connection reuse
+// Connection Pool Cache
 const transporterPool = new Map();
 
 function getTransporter(user, pass) {
@@ -40,8 +40,8 @@ function getTransporter(user, pass) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     pool: true,
-    maxConnections: 2,
-    maxMessages: 100,
+    maxConnections: 5,
+    maxMessages: 200,
     auth: { user, pass }
   });
 
@@ -73,7 +73,7 @@ app.post('/login', (req, res) => {
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
     return req.session.save((err) => {
-      if (err) return res.status(500).json({ success: false, message: 'Session storage error' });
+      if (err) return res.status(500).json({ success: false, message: 'Session error' });
       res.json({ success: true });
     });
   }
@@ -87,23 +87,12 @@ app.post('/logout', (req, res) => {
   });
 });
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-function escapeHtml(text) {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-// Email Dispatcher with PNG/Photo Support
+// Send Email Route
 app.post('/api/send-email', requireLogin, async (req, res) => {
-  const { senderName, gmailId, appPassword, subject, messageBody, to, imageBase64, imageName } = req.body;
+  const { senderName, gmailId, appPassword, subject, htmlBody, to } = req.body;
 
-  if (!gmailId || !appPassword || !to || (!messageBody && !imageBase64)) {
-    return res.status(400).json({ success: false, message: 'Missing required parameters' });
+  if (!gmailId || !appPassword || !to || !htmlBody) {
+    return res.status(400).json({ success: false, message: 'Missing fields' });
   }
 
   const cleanGmailId  = gmailId.trim();
@@ -111,44 +100,44 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanTo       = to.trim();
 
   try {
-    const microDelay = Math.floor(Math.random() * 300) + 300;
-    await sleep(microDelay);
-
     const transporter = getTransporter(cleanGmailId, cleanPassword);
 
     const fromFormatted = senderName && senderName.trim()
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
+    // Convert Base64 images to inline CID attachments for seamless rendering
+    let processedHtml = htmlBody;
+    const attachments = [];
+    const base64Regex = /<img[^>]+src="data:image\/([a-zA-Z]*);base64,([^"]+)"([^>]*)>/g;
+    let match;
+    let imgIndex = 0;
+
+    while ((match = base64Regex.exec(htmlBody)) !== null) {
+      const ext = match[1] || 'png';
+      const base64Data = match[2];
+      const extraAttributes = match[3] || '';
+      const cidName = `inline_img_${Date.now()}_${imgIndex++}`;
+
+      attachments.push({
+        filename: `${cidName}.${ext}`,
+        content: Buffer.from(base64Data, 'base64'),
+        cid: cidName
+      });
+
+      processedHtml = processedHtml.replace(
+        match[0],
+        `<img src="cid:${cidName}" ${extraAttributes} style="display:block;margin:8px 0;border-radius:6px;" />`
+      );
+    }
+
     const mailOptions = {
       from: fromFormatted,
       to: cleanTo,
       subject: subject ? subject.trim() : '',
+      html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;line-height:1.6;">${processedHtml}</div>`,
+      attachments: attachments
     };
-
-    // PNG / Image Attached Case
-    if (imageBase64 && imageBase64.includes('base64,')) {
-      const base64Content = imageBase64.split('base64,')[1];
-      const imageBuffer = Buffer.from(base64Content, 'base64');
-      const filename = imageName || 'image.png';
-
-      mailOptions.text = (messageBody || '').trim();
-      mailOptions.html = `
-        <div style="font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;line-height:1.6;white-space:pre-wrap;">${escapeHtml(messageBody || '')}</div>
-        <br>
-        <div style="margin-top:10px;">
-          <img src="cid:attached_png" alt="Image" style="max-width:100%;height:auto;border-radius:6px;display:block;" />
-        </div>
-      `;
-      mailOptions.attachments = [{
-        filename: filename,
-        content: imageBuffer,
-        cid: 'attached_png' // Embedded inline under the message
-      }];
-    } else {
-      // Pure Plain Text when no image is attached
-      mailOptions.text = (messageBody || '').trim();
-    }
 
     const info = await transporter.sendMail(mailOptions);
     res.json({ success: true, messageId: info.messageId });
