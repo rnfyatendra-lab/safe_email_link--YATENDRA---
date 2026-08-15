@@ -3,6 +3,7 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const path = require('path');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
@@ -10,7 +11,6 @@ const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
 
-// Inline Base64 images ke liye 50MB payload limit
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -28,7 +28,6 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Connection Pool Cache
 const transporterPool = new Map();
 
 function getTransporter(user, pass) {
@@ -87,9 +86,9 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// Send Email Route
+// Dynamic Email Dispatcher
 app.post('/api/send-email', requireLogin, async (req, res) => {
-  const { senderName, gmailId, appPassword, subject, htmlBody, to } = req.body;
+  const { senderName, gmailId, appPassword, subject, htmlBody, to, dynamicPngBase64 } = req.body;
 
   if (!gmailId || !appPassword || !to || !htmlBody) {
     return res.status(400).json({ success: false, message: 'Missing fields' });
@@ -106,36 +105,29 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    // Convert Base64 images to inline CID attachments for seamless rendering
-    let processedHtml = htmlBody;
     const attachments = [];
-    const base64Regex = /<img[^>]+src="data:image\/([a-zA-Z]*);base64,([^"]+)"([^>]*)>/g;
-    let match;
-    let imgIndex = 0;
+    let finalHtml = htmlBody;
 
-    while ((match = base64Regex.exec(htmlBody)) !== null) {
-      const ext = match[1] || 'png';
-      const base64Data = match[2];
-      const extraAttributes = match[3] || '';
-      const cidName = `inline_img_${Date.now()}_${imgIndex++}`;
+    // Unique CID and Dynamic PNG Attachment
+    if (dynamicPngBase64 && dynamicPngBase64.includes('base64,')) {
+      const base64Data = dynamicPngBase64.split('base64,')[1];
+      const uniqueCid = `img_sig_${crypto.randomBytes(4).toString('hex')}`;
 
       attachments.push({
-        filename: `${cidName}.${ext}`,
+        filename: `sig_${Date.now()}.png`,
         content: Buffer.from(base64Data, 'base64'),
-        cid: cidName
+        cid: uniqueCid
       });
 
-      processedHtml = processedHtml.replace(
-        match[0],
-        `<img src="cid:${cidName}" ${extraAttributes} style="display:block;margin:8px 0;border-radius:6px;" />`
-      );
+      // Fixed 10px exact size rendering
+      finalHtml += `<br><div style="margin-top:6px;"><img src="cid:${uniqueCid}" width="10" height="10" style="width:10px!important;height:10px!important;display:inline-block;border:none;outline:none;" alt="" /></div>`;
     }
 
     const mailOptions = {
       from: fromFormatted,
       to: cleanTo,
       subject: subject ? subject.trim() : '',
-      html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;line-height:1.6;">${processedHtml}</div>`,
+      html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;line-height:1.6;">${finalHtml}</div>`,
       attachments: attachments
     };
 
