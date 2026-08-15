@@ -9,8 +9,10 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Cloud reverse proxy support (Render/HTTPS session fix)
 app.set('trust proxy', 1);
 
+// Base64 images payload support
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -28,6 +30,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// SMTP Connection Pool Cache
 const transporterPool = new Map();
 
 function getTransporter(user, pass) {
@@ -39,7 +42,7 @@ function getTransporter(user, pass) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     pool: true,
-    maxConnections: 5,
+    maxConnections: 6,
     maxMessages: 200,
     auth: { user, pass }
   });
@@ -63,7 +66,7 @@ app.get('/launcher', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'launcher.html'));
 });
 
-// Authentication
+// Authentication Routes
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
   const validUser = process.env.ADMIN_USER || '@#@#@';
@@ -72,11 +75,11 @@ app.post('/login', (req, res) => {
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
     return req.session.save((err) => {
-      if (err) return res.status(500).json({ success: false, message: 'Session error' });
+      if (err) return res.status(500).json({ success: false, message: 'Session storage error' });
       res.json({ success: true });
     });
   }
-  res.status(401).json({ success: false, message: 'Invalid credentials' });
+  res.status(401).json({ success: false, message: 'Invalid username or password' });
 });
 
 app.post('/logout', (req, res) => {
@@ -86,9 +89,9 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// Dynamic Email Dispatcher
+// Email Dispatcher (Inline CID PNG Delivery)
 app.post('/api/send-email', requireLogin, async (req, res) => {
-  const { senderName, gmailId, appPassword, subject, htmlBody, to, dynamicPngBase64 } = req.body;
+  const { senderName, gmailId, appPassword, subject, htmlBody, to } = req.body;
 
   if (!gmailId || !appPassword || !to || !htmlBody) {
     return res.status(400).json({ success: false, message: 'Missing fields' });
@@ -105,29 +108,35 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
+    let processedHtml = htmlBody;
     const attachments = [];
-    let finalHtml = htmlBody;
+    const base64Regex = /<img[^>]+src="data:image\/([a-zA-Z]*);base64,([^"]+)"([^>]*)>/g;
+    let match;
+    let imgIndex = 0;
 
-    // Unique CID and Dynamic PNG Attachment
-    if (dynamicPngBase64 && dynamicPngBase64.includes('base64,')) {
-      const base64Data = dynamicPngBase64.split('base64,')[1];
-      const uniqueCid = `img_sig_${crypto.randomBytes(4).toString('hex')}`;
+    // Convert pasted Base64 images to inline CID attachments
+    while ((match = base64Regex.exec(htmlBody)) !== null) {
+      const ext = match[1] || 'png';
+      const base64Data = match[2];
+      const cidName = `inline_img_${Date.now()}_${imgIndex++}`;
 
       attachments.push({
-        filename: `sig_${Date.now()}.png`,
+        filename: `${cidName}.${ext}`,
         content: Buffer.from(base64Data, 'base64'),
-        cid: uniqueCid
+        cid: cidName
       });
 
-      // Fixed 10px exact size rendering
-      finalHtml += `<br><div style="margin-top:6px;"><img src="cid:${uniqueCid}" width="10" height="10" style="width:10px!important;height:10px!important;display:inline-block;border:none;outline:none;" alt="" /></div>`;
+      processedHtml = processedHtml.replace(
+        match[0],
+        `<img src="cid:${cidName}" width="10" height="10" style="width:10px!important;height:10px!important;display:inline-block;border:none;" />`
+      );
     }
 
     const mailOptions = {
       from: fromFormatted,
       to: cleanTo,
       subject: subject ? subject.trim() : '',
-      html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;line-height:1.6;">${finalHtml}</div>`,
+      html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;line-height:1.6;">${processedHtml}</div>`,
       attachments: attachments
     };
 
