@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fast Mailer — Launcher</title>
+<title>Fast Mailer — Pro Launcher</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -96,8 +96,8 @@ textarea#recipients{min-height:160px;font-size:13px}
     <div class="field"><label>Subject</label><input id="subject" type="text" placeholder="Email subject line"></div>
     
     <div class="field">
-      <label>Message Body (Paste Text & PNG Directly via Ctrl+V)</label>
-      <div id="messageBody" class="rich-editor" contenteditable="true" placeholder="Write message here... Paste PNG anywhere in this box"></div>
+      <label>Message Body (Paste text or optionally Ctrl+V a PNG)</label>
+      <div id="messageBody" class="rich-editor" contenteditable="true" placeholder="Write or paste your message template here... (PNG is only added if you press Ctrl+V)"></div>
     </div>
   </div>
 
@@ -111,10 +111,10 @@ textarea#recipients{min-height:160px;font-size:13px}
       <textarea id="recipients" placeholder="Paste emails here:&#10;&#10;user1@gmail.com&#10;user2@yahoo.com, user3@outlook.com" oninput="countRecipients()"></textarea>
     </div>
     <div class="tips">
-      <strong>📋 DISPATCH STATUS</strong>
-      Separate by comma or new line<br>
-      High-Speed <b>6 Emails Parallel Mode</b> active<br>
-      Inline 10px Auto-Scaled PNG Delivery enabled
+      <strong>📋 HIGH SPEED ENGINE</strong>
+      Delimiters: comma or new line<br>
+      High-Speed <b>8 Parallel Mode</b> active<br>
+      Automatic Format Switch: Pure Plain-Text if no image is attached for highest Primary Inbox landing rate.
     </div>
   </div>
 </div>
@@ -125,7 +125,7 @@ textarea#recipients{min-height:160px;font-size:13px}
 </div>
 
 <div class="action-row">
-  <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (6 Parallel)</button>
+  <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (8 Parallel Blitz)</button>
   <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
 </div>
 
@@ -147,7 +147,7 @@ function clearLog(){document.getElementById('logList').innerHTML='';document.get
 function setProgress(cur,tot){const w=document.getElementById('progressWrap');w.style.display='flex';const pct=tot>0?Math.round(cur/tot*100):0;document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').textContent=`Sending ${cur} / ${tot}`}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
-// Direct Clipboard Image Paste
+// Direct Clipboard Image Paste Handler
 const editor = document.getElementById('messageBody');
 editor.addEventListener('paste', function(e) {
   const items = (e.clipboardData || window.clipboardData).items;
@@ -182,8 +182,9 @@ function validate(){
   const fields=[{id:'senderName',label:'Sender Name'},{id:'gmailId',label:'Gmail ID'},{id:'appPassword',label:'App Password'},{id:'subject',label:'Subject'}];
   for(const f of fields){if(!document.getElementById(f.id).value.trim()){setStatus('error','❌',`${f.label} is required`);document.getElementById(f.id).focus();return false}}
   
-  const content = editor.innerHTML.trim();
-  if(!content || content === '<br>'){
+  const content = editor.innerText.trim();
+  const hasImg = editor.querySelector('img') !== null;
+  if(!content && !hasImg){
     setStatus('error','❌','Message Body cannot be empty');
     editor.focus();
     return false;
@@ -201,15 +202,20 @@ async function sendAll(){
   const gmailId=document.getElementById('gmailId').value.trim();
   const appPassword=document.getElementById('appPassword').value.trim();
   const subject=document.getElementById('subject').value.trim();
-  const htmlBody=editor.innerHTML;
+  
+  const hasImage = editor.querySelector('img') !== null;
+  // If NO image is present, send 100% clean plain text
+  const contentToSend = hasImage ? editor.innerHTML : editor.innerText.trim();
+
   const btn=document.getElementById('sendBtn');
   
-  btn.disabled=true;btn.innerHTML='⏳ Sending in 6 Parallel Mode...';
+  btn.disabled=true;btn.innerHTML='⏳ Sending in 8 Parallel Blitz...';
   clearLog();setStatus('sending','📤',`Sending to ${emails.length} recipients...`);setProgress(0,emails.length);
   
   let ok=0,fail=0;
 
-  const BATCH_SIZE = 6;
+  // Ultra-Fast 8 Parallel Sending Loop
+  const BATCH_SIZE = 8;
   for(let i=0; i<emails.length; i+=BATCH_SIZE){
     const chunk = emails.slice(i, i+BATCH_SIZE);
     
@@ -223,8 +229,9 @@ async function sendAll(){
             gmailId,
             appPassword,
             subject,
-            htmlBody,
-            to:email
+            content: contentToSend,
+            hasImage: hasImage,
+            to: email
           })
         });
         const d=await res.json();
@@ -238,7 +245,7 @@ async function sendAll(){
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
     if(i + BATCH_SIZE < emails.length) {
-      await sleep(1000);
+      await sleep(600); // 600ms quick inter-batch pace
     }
   }
 
@@ -246,7 +253,7 @@ async function sendAll(){
   else if(ok===0){setStatus('error','💥',`All ${fail} failed. Check Gmail credentials.`);addLog('fail','❌',`All failed`)}
   else{setStatus('sending','⚠️',`${ok} sent, ${fail} failed`);addLog('ok','✅',`${ok} delivered`);addLog('fail','❌',`${fail} failed`)}
   addLog('info','📊',`Total: ${emails.length}  ·  ✅ ${ok} Success  ·  ❌ ${fail} Failed`);
-  btn.disabled=false;btn.innerHTML='🚀 Send All Emails (6 Parallel)';
+  btn.disabled=false;btn.innerHTML='🚀 Send All Emails (8 Parallel Blitz)';
 }
 
 function clearAll(){
