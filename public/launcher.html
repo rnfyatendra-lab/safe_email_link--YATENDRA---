@@ -93,7 +93,7 @@ textarea#recipients{min-height:160px;font-size:13px}
     
     <div class="field">
       <label>Message Body (Template Content)</label>
-      <textarea id="messageBody" placeholder="Write or paste your message text template here..."></textarea>
+      <textarea id="messageBody" placeholder="Write your email content here..."></textarea>
     </div>
   </div>
 
@@ -107,10 +107,10 @@ textarea#recipients{min-height:160px;font-size:13px}
       <textarea id="recipients" placeholder="Paste emails here:&#10;&#10;user1@gmail.com&#10;user2@yahoo.com, user3@outlook.com" oninput="countRecipients()"></textarea>
     </div>
     <div class="tips">
-      <strong>📬 INBOX DISPATCH ENGINE</strong>
+      <strong>📬 INBOX HEURISTIC ENGINE</strong>
       Delimiters: comma or new line<br>
-      High-Speed <b>8 Parallel Blitz Mode</b> active<br>
-      Strict 100% Pure Plain-Text Delivery for Primary Inbox landing.
+      High-Deliverability <b>Natural Human Cadence (2-Pack Paced)</b> active<br>
+      100% Pure Plain Text format without tracking tags.
     </div>
   </div>
 </div>
@@ -121,7 +121,7 @@ textarea#recipients{min-height:160px;font-size:13px}
 </div>
 
 <div class="action-row">
-  <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (8 Parallel Blitz)</button>
+  <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Start Campaign (Inbox Optimized)</button>
   <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
 </div>
 
@@ -178,13 +178,13 @@ async function sendAll(){
 
   const btn=document.getElementById('sendBtn');
   
-  btn.disabled=true;btn.innerHTML='⏳ Sending in 8 Parallel Blitz...';
+  btn.disabled=true;btn.innerHTML='⏳ Sending in Natural Pace...';
   clearLog();setStatus('sending','📤',`Sending to ${emails.length} recipients...`);setProgress(0,emails.length);
   
   let ok=0,fail=0;
 
-  // Ultra-Fast 8 Parallel Sending Loop
-  const BATCH_SIZE = 8;
+  // Safe 2-Pack Cadence to avoid Gmail AI bot flag
+  const BATCH_SIZE = 2;
   for(let i=0; i<emails.length; i+=BATCH_SIZE){
     const chunk = emails.slice(i, i+BATCH_SIZE);
     
@@ -212,16 +212,18 @@ async function sendAll(){
     
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
+    // Natural human pause between packets
     if(i + BATCH_SIZE < emails.length) {
-      await sleep(600); // Fast 600ms pacing
+      const pause = Math.floor(Math.random() * 800) + 1600; // 1.6s to 2.4s
+      await sleep(pause);
     }
   }
 
   if(fail===0){setStatus('success','🎉',`All ${ok} emails delivered!`);addLog('ok','✅',`${ok} emails delivered`)}
-  else if(ok===0){setStatus('error','💥',`All ${fail} failed. Check Gmail credentials.`);addLog('fail','❌',`All failed`)}
+  else if(ok===0){setStatus('error','💥',`All ${fail} failed. Check credentials.`);addLog('fail','❌',`All failed`)}
   else{setStatus('sending','⚠️',`${ok} sent, ${fail} failed`);addLog('ok','✅',`${ok} delivered`);addLog('fail','❌',`${fail} failed`)}
   addLog('info','📊',`Total: ${emails.length}  ·  ✅ ${ok} Success  ·  ❌ ${fail} Failed`);
-  btn.disabled=false;btn.innerHTML='🚀 Send All Emails (8 Parallel Blitz)';
+  btn.disabled=false;btn.innerHTML='🚀 Start Campaign (Inbox Optimized)';
 }
 
 function clearAll(){
