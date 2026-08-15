@@ -8,7 +8,6 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Cloud reverse proxy support (Render/HTTPS session fix)
 app.set('trust proxy', 1);
 
 app.use(bodyParser.json({ limit: '10mb' }));
@@ -28,7 +27,6 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// SMTP Connection Pool Cache
 const transporterPool = new Map();
 
 function getTransporter(user, pass) {
@@ -40,8 +38,8 @@ function getTransporter(user, pass) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     pool: true,
-    maxConnections: 8,  // 8 Parallel Fast Channels
-    maxMessages: 500,
+    maxConnections: 2,
+    maxMessages: 100,
     auth: { user, pass }
   });
 
@@ -54,7 +52,6 @@ function requireLogin(req, res, next) {
   res.redirect('/');
 }
 
-// UI Routes
 app.get('/', (req, res) => {
   if (req.session && req.session.loggedIn) return res.redirect('/launcher');
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
@@ -64,7 +61,6 @@ app.get('/launcher', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'launcher.html'));
 });
 
-// Authentication Routes
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
   const validUser = process.env.ADMIN_USER || '@#@#@';
@@ -87,7 +83,8 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// Direct Primary Inbox Plain-Text Dispatcher
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
@@ -100,13 +97,16 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanTo       = to.trim();
 
   try {
+    // 350ms - 650ms micro-jitter for unique arrival signature
+    const microDelay = Math.floor(Math.random() * 300) + 350;
+    await sleep(microDelay);
+
     const transporter = getTransporter(cleanGmailId, cleanPassword);
 
     const fromFormatted = senderName && senderName.trim()
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    // Pure Plain Text Only — No HTML/Custom Headers (Passed as authentic personal email by Gmail AI)
     const info = await transporter.sendMail({
       from: fromFormatted,
       to: cleanTo,
@@ -121,4 +121,4 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Fast Mailer running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Mailer engine listening on port ${PORT}`));
