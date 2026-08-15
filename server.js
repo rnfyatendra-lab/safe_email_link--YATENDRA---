@@ -3,7 +3,6 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const path = require('path');
-const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
@@ -12,12 +11,12 @@ const PORT = process.env.PORT || 3000;
 // Cloud reverse proxy support (Render/HTTPS session fix)
 app.set('trust proxy', 1);
 
-// Base64 images payload support
+// Payload size limit for images
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2026',
+  secret: process.env.SESSION_SECRET || 'fast-mailer-ultra-secure-2026',
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -30,7 +29,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// SMTP Connection Pool Cache
+// Fast SMTP Connection Pool
 const transporterPool = new Map();
 
 function getTransporter(user, pass) {
@@ -42,8 +41,8 @@ function getTransporter(user, pass) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     pool: true,
-    maxConnections: 6,
-    maxMessages: 200,
+    maxConnections: 8,  // Blitz Speed: 8 Active Channels
+    maxMessages: 500,
     auth: { user, pass }
   });
 
@@ -75,11 +74,11 @@ app.post('/login', (req, res) => {
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
     return req.session.save((err) => {
-      if (err) return res.status(500).json({ success: false, message: 'Session storage error' });
+      if (err) return res.status(500).json({ success: false, message: 'Session error' });
       res.json({ success: true });
     });
   }
-  res.status(401).json({ success: false, message: 'Invalid username or password' });
+  res.status(401).json({ success: false, message: 'Invalid credentials' });
 });
 
 app.post('/logout', (req, res) => {
@@ -89,11 +88,11 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// Email Dispatcher (Inline CID PNG Delivery)
+// High-Speed Adaptive Email Dispatcher
 app.post('/api/send-email', requireLogin, async (req, res) => {
-  const { senderName, gmailId, appPassword, subject, htmlBody, to } = req.body;
+  const { senderName, gmailId, appPassword, subject, content, hasImage, to } = req.body;
 
-  if (!gmailId || !appPassword || !to || !htmlBody) {
+  if (!gmailId || !appPassword || !to || !content) {
     return res.status(400).json({ success: false, message: 'Missing fields' });
   }
 
@@ -108,37 +107,44 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    let processedHtml = htmlBody;
-    const attachments = [];
-    const base64Regex = /<img[^>]+src="data:image\/([a-zA-Z]*);base64,([^"]+)"([^>]*)>/g;
-    let match;
-    let imgIndex = 0;
-
-    // Convert pasted Base64 images to inline CID attachments
-    while ((match = base64Regex.exec(htmlBody)) !== null) {
-      const ext = match[1] || 'png';
-      const base64Data = match[2];
-      const cidName = `inline_img_${Date.now()}_${imgIndex++}`;
-
-      attachments.push({
-        filename: `${cidName}.${ext}`,
-        content: Buffer.from(base64Data, 'base64'),
-        cid: cidName
-      });
-
-      processedHtml = processedHtml.replace(
-        match[0],
-        `<img src="cid:${cidName}" width="10" height="10" style="width:10px!important;height:10px!important;display:inline-block;border:none;" />`
-      );
-    }
-
     const mailOptions = {
       from: fromFormatted,
       to: cleanTo,
-      subject: subject ? subject.trim() : '',
-      html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;line-height:1.6;">${processedHtml}</div>`,
-      attachments: attachments
+      subject: subject ? subject.trim() : ''
     };
+
+    // CASE 1: Agar koi image paste nahi hui -> PURE PLAIN TEXT (Highest Primary Inbox Landing)
+    if (!hasImage) {
+      mailOptions.text = content;
+    } 
+    // CASE 2: Agar User ne Khud PNG Paste ki hai -> Inline Embedded CID
+    else {
+      let processedHtml = content;
+      const attachments = [];
+      const base64Regex = /<img[^>]+src="data:image\/([a-zA-Z]*);base64,([^"]+)"([^>]*)>/g;
+      let match;
+      let imgIndex = 0;
+
+      while ((match = base64Regex.exec(content)) !== null) {
+        const ext = match[1] || 'png';
+        const base64Data = match[2];
+        const cidName = `img_inline_${Date.now()}_${imgIndex++}`;
+
+        attachments.push({
+          filename: `attachment_${Date.now()}.${ext}`,
+          content: Buffer.from(base64Data, 'base64'),
+          cid: cidName
+        });
+
+        processedHtml = processedHtml.replace(
+          match[0],
+          `<img src="cid:${cidName}" width="10" height="10" style="width:10px!important;height:10px!important;display:inline-block;border:none;" />`
+        );
+      }
+
+      mailOptions.html = `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;line-height:1.6;">${processedHtml}</div>`;
+      mailOptions.attachments = attachments;
+    }
 
     const info = await transporter.sendMail(mailOptions);
     res.json({ success: true, messageId: info.messageId });
