@@ -30,24 +30,26 @@ body{min-height:100vh;background:#fcf8f8;font-family:'Inter',sans-serif;color:#1
 .field input,.field textarea{width:100%;padding:13px 16px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;color:#0f172a;font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:all 0.2s;resize:none}
 .field input:focus,.field textarea:focus{border-color:#dc2626;background:#fff;box-shadow:0 0 0 4px rgba(220,38,38,0.1)}
 .field input::placeholder,.field textarea::placeholder{color:#94a3b8}
-textarea#messageBody{min-height:110px}
-textarea#recipients{min-height:150px;font-size:13px}
+
+/* Rich Message Body Editor with Direct Image Paste & Resize Controls */
+.editor-wrap{position:relative}
+.rich-editor{min-height:160px;max-height:260px;overflow-y:auto;padding:13px 16px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;color:#0f172a;font-size:14px;outline:none;transition:all 0.2s;line-height:1.5;white-space:pre-wrap}
+.rich-editor:focus{border-color:#dc2626;background:#fff;box-shadow:0 0 0 4px rgba(220,38,38,0.1)}
+.rich-editor:empty:before{content:attr(placeholder);color:#94a3b8;cursor:text}
+.rich-editor img{border-radius:6px;cursor:pointer;outline:2px solid transparent;transition:all 0.2s}
+.rich-editor img.selected-img{outline:2px solid #dc2626;box-shadow:0 0 10px rgba(220,38,38,0.3)}
+
+/* Floating Image Toolbar */
+.img-size-toolbar{display:none;position:absolute;top:-42px;right:0;background:#fff;border:1.5px solid #cbd5e1;border-radius:8px;padding:4px 8px;gap:6px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:20;align-items:center}
+.img-size-toolbar button{background:#f8fafc;border:1px solid #cbd5e1;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;color:#334155;cursor:pointer}
+.img-size-toolbar button:hover{background:#fee2e2;color:#dc2626;border-color:#fca5a5}
+.img-size-toolbar span{font-size:11px;font-weight:700;color:#dc2626;margin-right:4px}
+
+textarea#recipients{min-height:160px;font-size:13px}
 .pass-wrap{position:relative}
 .pass-wrap input{padding-right:48px}
 .toggle-pass{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:#94a3b8;cursor:pointer;font-size:18px;padding:4px}
 .toggle-pass:hover{color:#dc2626}
-
-/* Image Upload & Paste Container */
-.image-upload-wrap{border:2px dashed #fca5a5;background:#fff5f5;border-radius:10px;padding:14px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative}
-.image-upload-wrap:hover{background:#fee2e2;border-color:#ef4444}
-.image-upload-wrap p{font-size:12px;color:#991b1b;font-weight:600;margin-top:4px}
-.image-upload-wrap span{font-size:11px;color:#7f1d1d}
-.image-preview-box{display:none;position:relative;margin-top:10px;background:#f8fafc;padding:10px;border-radius:10px;border:1.5px solid #e2e8f0;align-items:center;gap:12px}
-.image-preview-box img{max-height:75px;max-width:100px;border-radius:6px;object-fit:cover}
-.preview-meta{flex:1;text-align:left;font-size:12px;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.remove-img-btn{background:#fee2e2;border:none;color:#dc2626;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer}
-.remove-img-btn:hover{background:#fca5a5}
-
 .rec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .badge{font-size:11px;font-weight:700;padding:4px 12px;background:#dc2626;color:#fff;border-radius:20px}
 .tips{padding:15px;background:#fff1f2;border:1.5px solid #fecdd3;border-radius:12px;font-size:12px;color:#9f1239;line-height:1.8;margin-top:16px}
@@ -103,23 +105,19 @@ textarea#recipients{min-height:150px;font-size:13px}
     <div class="field"><label>Subject</label><input id="subject" type="text" placeholder="Email subject line"></div>
     
     <div class="field">
-      <label>Message Body</label>
-      <textarea id="messageBody" placeholder="Write message content here... (Or press Ctrl+V anywhere to paste a PNG/Photo)"></textarea>
-    </div>
+      <label>Message Body (Paste Text & PNG Directly via Ctrl+V)</label>
+      <div class="editor-wrap">
+        <!-- Floating Image Resize Controller -->
+        <div class="img-size-toolbar" id="imgToolbar">
+          <span>Image Size:</span>
+          <button onclick="resizeSelectedImg('25%')">25% (S)</button>
+          <button onclick="resizeSelectedImg('50%')">50% (M)</button>
+          <button onclick="resizeSelectedImg('75%')">75% (L)</button>
+          <button onclick="resizeSelectedImg('100%')">100% (Full)</button>
+          <button onclick="deleteSelectedImg()" style="color:#dc2626;">🗑 Delete</button>
+        </div>
 
-    <!-- PNG / Photo Attachment Section -->
-    <div class="field">
-      <label>Attach PNG / Photo (Below Template)</label>
-      <div class="image-upload-wrap" id="dropZone" onclick="document.getElementById('imageFileInput').click()">
-        <input type="file" id="imageFileInput" accept="image/png, image/jpeg, image/webp" style="display:none" onchange="handleFileSelect(event)">
-        <p>📷 Click to Upload or Paste PNG (Ctrl+V)</p>
-        <span>Supports PNG, JPG, WebP screenshots</span>
-      </div>
-
-      <div class="image-preview-box" id="previewBox">
-        <img id="previewImg" src="" alt="Preview">
-        <div class="preview-meta" id="previewName">image.png</div>
-        <button class="remove-img-btn" onclick="removeImage()">✕ Remove</button>
+        <div id="messageBody" class="rich-editor" contenteditable="true" placeholder="Write message here... Paste PNG/Screenshots anywhere inside this box"></div>
       </div>
     </div>
   </div>
@@ -134,10 +132,10 @@ textarea#recipients{min-height:150px;font-size:13px}
       <textarea id="recipients" placeholder="Paste emails here:&#10;&#10;user1@gmail.com&#10;user2@yahoo.com, user3@outlook.com" oninput="countRecipients()"></textarea>
     </div>
     <div class="tips">
-      <strong>📋 SAFE DISPATCH MODE</strong>
-      Separators: comma or new line<br>
-      Optimized: <b>2 Emails / Human Cadence</b> active<br>
-      Clean Text + Inline PNG rendering enabled for highest inbox delivery
+      <strong>📋 6 PARALLEL SPEED ACTIVE</strong>
+      Delimiters: comma or new line<br>
+      High-Speed <b>6 Emails Parallel Mode</b> active<br>
+      Direct Inline PNG Delivery: Exact text + custom-sized image delivery
     </div>
   </div>
 </div>
@@ -148,7 +146,7 @@ textarea#recipients{min-height:150px;font-size:13px}
 </div>
 
 <div class="action-row">
-  <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Start Campaign</button>
+  <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (6 Parallel)</button>
   <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
 </div>
 
@@ -161,8 +159,7 @@ textarea#recipients{min-height:150px;font-size:13px}
 </div>
 
 <script>
-let attachedBase64 = null;
-let attachedFileName = '';
+let currentSelectedImg = null;
 
 function parseEmails(raw){return raw.split(/[\n,]+/).map(e=>e.trim().toLowerCase()).filter(e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))}
 function countRecipients(){const e=parseEmails(document.getElementById('recipients').value),b=document.getElementById('recipientCount');b.textContent=`${e.length} recipient${e.length!==1?'s':''}`;}
@@ -173,57 +170,79 @@ function clearLog(){document.getElementById('logList').innerHTML='';document.get
 function setProgress(cur,tot){const w=document.getElementById('progressWrap');w.style.display='flex';const pct=tot>0?Math.round(cur/tot*100):0;document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').textContent=`Sending ${cur} / ${tot}`}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
-// Handle File Selection
-function handleFileSelect(event){
-  const file = event.target.files[0];
-  if(file){
-    loadAndPreviewImage(file);
-  }
-}
-
-// Clipboard Paste (Ctrl+V) Support for PNG/Images
-window.addEventListener('paste', (e) => {
-  const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-  for (let index in items) {
-    const item = items[index];
-    if (item.kind === 'file' && item.type.includes('image/')) {
-      const blob = item.getAsFile();
-      loadAndPreviewImage(blob, 'pasted-image.png');
+// Rich Editor Direct Paste Handler (Embeds PNG directly into the editor)
+const editor = document.getElementById('messageBody');
+editor.addEventListener('paste', function(e) {
+  const items = (e.clipboardData || window.clipboardData).items;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf('image') !== -1) {
+      e.preventDefault();
+      const blob = items[i].getAsFile();
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const img = document.createElement('img');
+        img.src = event.target.result;
+        img.style.maxWidth = '100%';
+        img.style.width = '100%'; // Default full width
+        
+        // Insert image at caret
+        const sel = window.getSelection();
+        if (sel.getRangeAt && sel.rangeCount) {
+          const range = sel.getRangeAt(0);
+          range.deleteContents();
+          range.insertNode(img);
+          range.collapse(false);
+        } else {
+          editor.appendChild(img);
+        }
+      };
+      reader.readAsDataURL(blob);
       break;
     }
   }
 });
 
-function loadAndPreviewImage(file, defaultName = ''){
-  const reader = new FileReader();
-  reader.onload = function(e){
-    attachedBase64 = e.target.result;
-    attachedFileName = file.name || defaultName || 'screenshot.png';
-    
-    document.getElementById('previewImg').src = attachedBase64;
-    document.getElementById('previewName').textContent = attachedFileName;
-    document.getElementById('previewBox').style.display = 'flex';
-    document.getElementById('dropZone').style.display = 'none';
-  };
-  reader.readAsDataURL(file);
+// Image Click Selection for Floating Size Toolbar
+editor.addEventListener('click', function(e) {
+  if (e.target && e.target.tagName === 'IMG') {
+    if (currentSelectedImg) currentSelectedImg.classList.remove('selected-img');
+    currentSelectedImg = e.target;
+    currentSelectedImg.classList.add('selected-img');
+    document.getElementById('imgToolbar').style.display = 'flex';
+  } else {
+    deselectImg();
+  }
+});
+
+function deselectImg() {
+  if (currentSelectedImg) {
+    currentSelectedImg.classList.remove('selected-img');
+    currentSelectedImg = null;
+  }
+  document.getElementById('imgToolbar').style.display = 'none';
 }
 
-function removeImage(){
-  attachedBase64 = null;
-  attachedFileName = '';
-  document.getElementById('imageFileInput').value = '';
-  document.getElementById('previewBox').style.display = 'none';
-  document.getElementById('dropZone').style.display = 'block';
+function resizeSelectedImg(widthStr) {
+  if (currentSelectedImg) {
+    currentSelectedImg.style.width = widthStr;
+  }
+}
+
+function deleteSelectedImg() {
+  if (currentSelectedImg) {
+    currentSelectedImg.remove();
+    deselectImg();
+  }
 }
 
 function validate(){
   const fields=[{id:'senderName',label:'Sender Name'},{id:'gmailId',label:'Gmail ID'},{id:'appPassword',label:'App Password'},{id:'subject',label:'Subject'}];
   for(const f of fields){if(!document.getElementById(f.id).value.trim()){setStatus('error','❌',`${f.label} is required`);document.getElementById(f.id).focus();return false}}
   
-  const msg = document.getElementById('messageBody').value.trim();
-  if(!msg && !attachedBase64){
-    setStatus('error','❌','Enter Message Body or attach a PNG/Photo');
-    document.getElementById('messageBody').focus();
+  const content = editor.innerHTML.trim();
+  if(!content || content === '<br>'){
+    setStatus('error','❌','Message Body cannot be empty');
+    editor.focus();
     return false;
   }
 
@@ -234,19 +253,22 @@ function validate(){
 
 async function sendAll(){
   const emails=validate();if(!emails)return;
+  deselectImg();
+
   const senderName=document.getElementById('senderName').value.trim();
   const gmailId=document.getElementById('gmailId').value.trim();
   const appPassword=document.getElementById('appPassword').value.trim();
   const subject=document.getElementById('subject').value.trim();
-  const messageBody=document.getElementById('messageBody').value.trim();
+  const htmlBody=editor.innerHTML;
   const btn=document.getElementById('sendBtn');
   
-  btn.disabled=true;btn.innerHTML='⏳ Sending in Safe Mode...';
+  btn.disabled=true;btn.innerHTML='⏳ Sending in 6 Parallel Mode...';
   clearLog();setStatus('sending','📤',`Sending to ${emails.length} recipients...`);setProgress(0,emails.length);
   
   let ok=0,fail=0;
 
-  const BATCH_SIZE = 2;
+  // 6 Parallel Mode sending loop
+  const BATCH_SIZE = 6;
   for(let i=0; i<emails.length; i+=BATCH_SIZE){
     const chunk = emails.slice(i, i+BATCH_SIZE);
     
@@ -260,10 +282,8 @@ async function sendAll(){
             gmailId,
             appPassword,
             subject,
-            messageBody,
-            to:email,
-            imageBase64: attachedBase64,
-            imageName: attachedFileName
+            htmlBody,
+            to:email
           })
         });
         const d=await res.json();
@@ -277,8 +297,7 @@ async function sendAll(){
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
     if(i + BATCH_SIZE < emails.length) {
-      const delay = Math.floor(Math.random() * 1000) + 2500; // 2.5s to 3.5s pause
-      await sleep(delay);
+      await sleep(1000); // 1-second pause between 6-email packets
     }
   }
 
@@ -286,12 +305,13 @@ async function sendAll(){
   else if(ok===0){setStatus('error','💥',`All ${fail} failed. Check Gmail credentials.`);addLog('fail','❌',`All failed`)}
   else{setStatus('sending','⚠️',`${ok} sent, ${fail} failed`);addLog('ok','✅',`${ok} delivered`);addLog('fail','❌',`${fail} failed`)}
   addLog('info','📊',`Total: ${emails.length}  ·  ✅ ${ok} Success  ·  ❌ ${fail} Failed`);
-  btn.disabled=false;btn.innerHTML='🚀 Start Campaign';
+  btn.disabled=false;btn.innerHTML='🚀 Send All Emails (6 Parallel)';
 }
 
 function clearAll(){
-  ['senderName','gmailId','appPassword','subject','messageBody','recipients'].forEach(id=>document.getElementById(id).value='');
-  removeImage();
+  ['senderName','gmailId','appPassword','subject','recipients'].forEach(id=>document.getElementById(id).value='');
+  editor.innerHTML = '';
+  deselectImg();
   countRecipients();clearLog();document.getElementById('progressWrap').style.display='none';setStatus('','⚡','System Ready');
 }
 
