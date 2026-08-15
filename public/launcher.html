@@ -7,72 +7,68 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{min-height:100vh;background:#fcf8f8;font-family:'Inter',sans-serif;color:#1e293b;padding:24px}
+body{min-height:100vh;background:#f0fdf4;font-family:'Inter',sans-serif;color:#1e293b;padding:24px}
 .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;background:#fff;padding:16px 24px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.04)}
 .logo{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:700;color:#0f172a}
-.logo span{color:#dc2626}
+.logo span{color:#059669}
 .logout-btn{padding:9px 20px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;color:#475569;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s}
-.logout-btn:hover{border-color:#dc2626;color:#dc2626;background:#fef2f2}
+.logout-btn:hover{border-color:#059669;color:#059669;background:#ecfdf5}
 .status-bar{display:flex;align-items:center;gap:12px;padding:14px 22px;background:#fff;border:1.5px solid #cbd5e1;border-radius:12px;margin-bottom:22px;transition:all 0.3s}
 .status-bar.success{border-color:#86efac;background:#f0fdf4}
 .status-bar.error{border-color:#fca5a5;background:#fef2f2}
-.status-bar.sending{border-color:#fca5a5;background:#fff1f2}
+.status-bar.sending{border-color:#a7f3d0;background:#ecfdf5}
 .status-icon{font-size:20px}
 .status-text{font-size:14px;font-weight:600;color:#334155}
 .status-bar.success .status-text{color:#166534}
 .status-bar.error .status-text{color:#991b1b}
-.status-bar.sending .status-text{color:#991b1b}
+.status-bar.sending .status-text{color:#065f46}
 .main-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:22px}
 .card{background:#fff;border:1.5px solid #e2e8f0;border-radius:18px;padding:26px;box-shadow:0 4px 15px rgba(0,0,0,0.02)}
-.card-title{font-size:12px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:20px}
+.card-title{font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:20px}
 .field{margin-bottom:16px}
 .field label{display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:8px}
 .field input,.field textarea{width:100%;padding:13px 16px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;color:#0f172a;font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:all 0.2s;resize:none}
-.field input:focus,.field textarea:focus{border-color:#dc2626;background:#fff;box-shadow:0 0 0 4px rgba(220,38,38,0.1)}
+.field input:focus,.field textarea:focus{border-color:#059669;background:#fff;box-shadow:0 0 0 4px rgba(5,150,105,0.12)}
 .field input::placeholder,.field textarea::placeholder{color:#94a3b8}
 
-.rich-editor{min-height:160px;max-height:260px;overflow-y:auto;padding:13px 16px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;color:#0f172a;font-size:14px;outline:none;transition:all 0.2s;line-height:1.5;white-space:pre-wrap}
-.rich-editor:focus{border-color:#dc2626;background:#fff;box-shadow:0 0 0 4px rgba(220,38,38,0.1)}
-.rich-editor:empty:before{content:attr(placeholder);color:#94a3b8;cursor:text}
-.rich-editor img{width:10px;height:10px;display:inline-block;margin:4px 0}
-
+textarea#messageBody{min-height:160px;font-size:14px}
 textarea#recipients{min-height:160px;font-size:13px}
 .pass-wrap{position:relative}
 .pass-wrap input{padding-right:48px}
 .toggle-pass{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:#94a3b8;cursor:pointer;font-size:18px;padding:4px}
-.toggle-pass:hover{color:#dc2626}
+.toggle-pass:hover{color:#059669}
 .rec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.badge{font-size:11px;font-weight:700;padding:4px 12px;background:#dc2626;color:#fff;border-radius:20px}
-.tips{padding:15px;background:#fff1f2;border:1.5px solid #fecdd3;border-radius:12px;font-size:12px;color:#9f1239;line-height:1.8;margin-top:16px}
-.tips strong{color:#881337;display:block;margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:0.8px;font-weight:700}
-.tips b{color:#dc2626}
+.badge{font-size:11px;font-weight:700;padding:4px 12px;background:#059669;color:#fff;border-radius:20px}
+.tips{padding:15px;background:#ecfdf5;border:1.5px solid #a7f3d0;border-radius:12px;font-size:12px;color:#065f46;line-height:1.8;margin-top:16px}
+.tips strong{color:#064e3b;display:block;margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:0.8px;font-weight:700}
+.tips b{color:#059669}
 .progress-wrap{display:none;align-items:center;gap:16px;padding:16px 22px;background:#fff;border:1.5px solid #cbd5e1;border-radius:14px;margin-bottom:22px}
 .progress-bar{flex:1;height:10px;background:#f1f5f9;border-radius:10px;overflow:hidden}
-.progress-fill{height:100%;background:linear-gradient(90deg,#ef4444,#b91c1c);border-radius:10px;width:0%;transition:width 0.3s ease}
-.progress-text{font-size:13px;font-weight:600;color:#dc2626;white-space:nowrap}
+.progress-fill{height:100%;background:linear-gradient(90deg,#10b981,#047857);border-radius:10px;width:0%;transition:width 0.3s ease}
+.progress-text{font-size:13px;font-weight:600;color:#059669;white-space:nowrap}
 .action-row{display:flex;gap:14px;margin-bottom:22px}
-.send-btn{flex:1;padding:16px;background:linear-gradient(135deg,#ef4444,#dc2626);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px}
-.send-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 24px rgba(220,38,38,0.35)}
+.send-btn{flex:1;padding:16px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.send-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 24px rgba(5,150,105,0.35)}
 .send-btn:disabled{opacity:0.6;cursor:not-allowed;transform:none}
 .clear-btn{padding:16px 24px;background:#fff;border:1.5px solid #cbd5e1;border-radius:12px;color:#475569;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s}
-.clear-btn:hover{border-color:#dc2626;color:#dc2626}
+.clear-btn:hover{border-color:#059669;color:#059669}
 .log-box{display:none;background:#fff;border:1.5px solid #cbd5e1;border-radius:16px;overflow:hidden}
 .log-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1.5px solid #f1f5f9;background:#f8fafc}
-.log-title{font-size:12px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:1px}
+.log-title{font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:1px}
 .log-clear{background:none;border:none;color:#94a3b8;font-size:13px;cursor:pointer;font-weight:600}
-.log-clear:hover{color:#dc2626}
+.log-clear:hover{color:#ef4444}
 .log-list{padding:14px;max-height:230px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
 .log-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:500}
 .log-item.ok{background:#f0fdf4;color:#166534}
 .log-item.fail{background:#fef2f2;color:#991b1b}
-.log-item.info{background:#fff1f2;color:#9f1239}
+.log-item.info{background:#ecfdf5;color:#065f46}
 @media(max-width:768px){.main-grid{grid-template-columns:1fr}body{padding:16px}}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="logo">📧 Fast<span>Mailer</span></div>
+  <div class="logo">📬 Fast<span>Mailer</span></div>
   <button class="logout-btn" id="logoutBtn">⎋ Logout</button>
 </div>
 
@@ -96,8 +92,8 @@ textarea#recipients{min-height:160px;font-size:13px}
     <div class="field"><label>Subject</label><input id="subject" type="text" placeholder="Email subject line"></div>
     
     <div class="field">
-      <label>Message Body (Paste text or optionally Ctrl+V a PNG)</label>
-      <div id="messageBody" class="rich-editor" contenteditable="true" placeholder="Write or paste your message template here... (PNG is only added if you press Ctrl+V)"></div>
+      <label>Message Body (Template Content)</label>
+      <textarea id="messageBody" placeholder="Write or paste your message text template here..."></textarea>
     </div>
   </div>
 
@@ -111,10 +107,10 @@ textarea#recipients{min-height:160px;font-size:13px}
       <textarea id="recipients" placeholder="Paste emails here:&#10;&#10;user1@gmail.com&#10;user2@yahoo.com, user3@outlook.com" oninput="countRecipients()"></textarea>
     </div>
     <div class="tips">
-      <strong>📋 HIGH SPEED ENGINE</strong>
+      <strong>📬 INBOX DISPATCH ENGINE</strong>
       Delimiters: comma or new line<br>
-      High-Speed <b>8 Parallel Mode</b> active<br>
-      Automatic Format Switch: Pure Plain-Text if no image is attached for highest Primary Inbox landing rate.
+      High-Speed <b>8 Parallel Blitz Mode</b> active<br>
+      Strict 100% Pure Plain-Text Delivery for Primary Inbox landing.
     </div>
   </div>
 </div>
@@ -147,51 +143,27 @@ function clearLog(){document.getElementById('logList').innerHTML='';document.get
 function setProgress(cur,tot){const w=document.getElementById('progressWrap');w.style.display='flex';const pct=tot>0?Math.round(cur/tot*100):0;document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').textContent=`Sending ${cur} / ${tot}`}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
-// Direct Clipboard Image Paste Handler
-const editor = document.getElementById('messageBody');
-editor.addEventListener('paste', function(e) {
-  const items = (e.clipboardData || window.clipboardData).items;
-  for (let i = 0; i < items.length; i++) {
-    if (items[i].type.indexOf('image') !== -1) {
-      e.preventDefault();
-      const blob = items[i].getAsFile();
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        const img = document.createElement('img');
-        img.src = event.target.result;
-        img.style.width = '10px';
-        img.style.height = '10px';
-        
-        const sel = window.getSelection();
-        if (sel.getRangeAt && sel.rangeCount) {
-          const range = sel.getRangeAt(0);
-          range.deleteContents();
-          range.insertNode(img);
-          range.collapse(false);
-        } else {
-          editor.appendChild(img);
-        }
-      };
-      reader.readAsDataURL(blob);
-      break;
-    }
-  }
-});
-
 function validate(){
-  const fields=[{id:'senderName',label:'Sender Name'},{id:'gmailId',label:'Gmail ID'},{id:'appPassword',label:'App Password'},{id:'subject',label:'Subject'}];
-  for(const f of fields){if(!document.getElementById(f.id).value.trim()){setStatus('error','❌',`${f.label} is required`);document.getElementById(f.id).focus();return false}}
-  
-  const content = editor.innerText.trim();
-  const hasImg = editor.querySelector('img') !== null;
-  if(!content && !hasImg){
-    setStatus('error','❌','Message Body cannot be empty');
-    editor.focus();
-    return false;
+  const fields=[
+    {id:'senderName',label:'Sender Name'},
+    {id:'gmailId',label:'Gmail ID'},
+    {id:'appPassword',label:'App Password'},
+    {id:'subject',label:'Subject'},
+    {id:'messageBody',label:'Message Body'}
+  ];
+  for(const f of fields){
+    if(!document.getElementById(f.id).value.trim()){
+      setStatus('error','❌',`${f.label} is required`);
+      document.getElementById(f.id).focus();
+      return false;
+    }
   }
 
   const emails=parseEmails(document.getElementById('recipients').value);
-  if(emails.length===0){setStatus('error','❌','Add at least 1 valid recipient email');return false}
+  if(emails.length===0){
+    setStatus('error','❌','Add at least 1 valid recipient email');
+    return false;
+  }
   return emails;
 }
 
@@ -202,10 +174,7 @@ async function sendAll(){
   const gmailId=document.getElementById('gmailId').value.trim();
   const appPassword=document.getElementById('appPassword').value.trim();
   const subject=document.getElementById('subject').value.trim();
-  
-  const hasImage = editor.querySelector('img') !== null;
-  // If NO image is present, send 100% clean plain text
-  const contentToSend = hasImage ? editor.innerHTML : editor.innerText.trim();
+  const messageBody=document.getElementById('messageBody').value.trim();
 
   const btn=document.getElementById('sendBtn');
   
@@ -229,8 +198,7 @@ async function sendAll(){
             gmailId,
             appPassword,
             subject,
-            content: contentToSend,
-            hasImage: hasImage,
+            messageBody,
             to: email
           })
         });
@@ -245,7 +213,7 @@ async function sendAll(){
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
     if(i + BATCH_SIZE < emails.length) {
-      await sleep(600); // 600ms quick inter-batch pace
+      await sleep(600); // Fast 600ms pacing
     }
   }
 
@@ -257,8 +225,7 @@ async function sendAll(){
 }
 
 function clearAll(){
-  ['senderName','gmailId','appPassword','subject','recipients'].forEach(id=>document.getElementById(id).value='');
-  editor.innerHTML = '';
+  ['senderName','gmailId','appPassword','subject','messageBody','recipients'].forEach(id=>document.getElementById(id).value='');
   countRecipients();clearLog();document.getElementById('progressWrap').style.display='none';setStatus('','⚡','System Ready');
 }
 
