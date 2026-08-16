@@ -69,7 +69,6 @@ textarea#messageBody, textarea#recipients{min-height:180px;font-size:13px}
 .log-item{display:flex;align-items:flex-start;gap:10px;padding:9px 13px;border-radius:8px;font-size:13px;font-weight:500}
 .log-item.ok{background:#f0fff4;color:#276749}
 .log-item.fail{background:#fff5f5;color:#e53e3e}
-.log-item.info{background:#ebf4ff;color:#2b6cb0}
 
 @media(max-width:700px){
   .form-grid{grid-template-columns:1fr}
@@ -82,7 +81,6 @@ textarea#messageBody, textarea#recipients{min-height:180px;font-size:13px}
 
 <div class="header">
   <div class="logo">📧 Fast<span>Mailer</span></div>
-  <!-- Double Click to Logout -->
   <button class="logout-btn" id="logoutBtn" ondblclick="handleLogout()" title="Double click to logout">⎋ Double Click to Logout</button>
 </div>
 
@@ -128,9 +126,9 @@ textarea#messageBody, textarea#recipients{min-height:180px;font-size:13px}
     <textarea id="recipients" placeholder="Paste emails here..." oninput="countRecipients()"></textarea>
   </div>
 
-  <!-- Row 4: Send All & Clear All Buttons Directly Below Column -->
+  <!-- Row 4: Send All & Clear All Buttons -->
   <div class="action-row-wrap">
-    <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails</button>
+    <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (4 Parallel)</button>
     <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
   </div>
 </div>
@@ -170,18 +168,6 @@ function parseSpintax(text) {
   return parseSpintax(text);
 }
 
-// Invisible Byte Variator for Strict Spam Heuristic Bypass
-function injectDynamicUniqueness(text) {
-  const zeroWidths = ['\u200B', '\u200C', '\u200D', '\uFEFF'];
-  const words = text.split(' ');
-  return words.map((w, idx) => {
-    if (idx % 3 === 0) {
-      return w + zeroWidths[Math.floor(Math.random() * zeroWidths.length)];
-    }
-    return w;
-  }).join(' ');
-}
-
 function validate(){
   const fields=[
     {id:'senderName',label:'Sender Name'},
@@ -215,7 +201,7 @@ async function sendAll(){
   const rawMessageBody=document.getElementById('messageBody').value.trim();
   const btn=document.getElementById('sendBtn');
   
-  btn.disabled=true; btn.innerHTML='⏳ Sending...';
+  btn.disabled=true; btn.innerHTML='⏳ Sending in 4 Parallel...';
   clearLog(); 
   setStatus('sending','📤',`Sending... (0/${emails.length})`); 
   setProgress(0, emails.length);
@@ -223,15 +209,14 @@ async function sendAll(){
   let ok=0, fail=0;
   let processed = 0;
 
-  // 8 Parallel Fast Sending Loop
-  const BATCH_SIZE = 8;
+  // Exact 4 Parallel Loop
+  const BATCH_SIZE = 4;
   for(let i=0; i<emails.length; i+=BATCH_SIZE){
     const chunk = emails.slice(i, i+BATCH_SIZE);
     
     const promises = chunk.map(async (email, chunkIdx) => {
       const globalIndex = i + chunkIdx + 1;
-      const spinned = parseSpintax(rawMessageBody);
-      const finalBody = injectDynamicUniqueness(spinned);
+      const finalBody = parseSpintax(rawMessageBody);
 
       try{
         const res=await fetch('/api/send-email',{
@@ -261,7 +246,6 @@ async function sendAll(){
         addLog('fail','❌',`[${globalIndex}/${emails.length}] Error → ${email}`);
       }
 
-      // Live Updating Count on Header Status Bar
       setStatus('sending','📤',`Sending... (${processed}/${emails.length})`);
     });
 
@@ -269,24 +253,20 @@ async function sendAll(){
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
     if(i + BATCH_SIZE < emails.length) {
-      await sleep(800);
+      await sleep(1500); // 1.5s natural pause between 4-email batches
     }
   }
 
-  // Exact Counting Status at Completion
   if(fail===0){
     setStatus('success','🎉',`All emails delivered successfully! (${ok}/${emails.length})`);
-    addLog('ok','✅',`Campaign completed: All ${ok}/${emails.length} emails delivered successfully!`);
   } else if(ok===0){
     setStatus('error','💥',`All emails failed! (0/${emails.length}) — Check credentials.`);
-    addLog('fail','❌',`All ${fail}/${emails.length} emails failed.`);
   } else {
     setStatus('sending','⚠️',`${ok}/${emails.length} delivered, ${fail} failed`);
-    addLog('ok','✅',`Summary: ${ok}/${emails.length} Delivered, ${fail} Failed`);
   }
 
   btn.disabled=false; 
-  btn.innerHTML='🚀 Send All Emails';
+  btn.innerHTML='🚀 Send All Emails (4 Parallel)';
 }
 
 function clearAll(){
@@ -297,7 +277,6 @@ function clearAll(){
   setStatus('','⚡','Ready to launch');
 }
 
-// Double Click Logout Handler
 async function handleLogout(){
   await fetch('/logout',{method:'POST'});
   window.location.href='/';
