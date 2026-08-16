@@ -40,7 +40,7 @@ function getTransporter(user, pass) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     pool: true,
-    maxConnections: 8,
+    maxConnections: 6,
     maxMessages: 200,
     auth: { user, pass }
   });
