@@ -14,7 +14,7 @@ app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2026',
+  secret: process.env.SESSION_SECRET || 'fast-mailer-ultra-secure-2026',
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -27,7 +27,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Connection Pool (Optimized for 4 Parallel Concurrency)
+// 8-Socket Persistent SSL SMTP Pool
 const transporterPool = new Map();
 
 function getTransporter(user, pass) {
@@ -41,8 +41,8 @@ function getTransporter(user, pass) {
     port: 465,
     secure: true,
     pool: true,
-    maxConnections: 4,
-    maxMessages: 100,
+    maxConnections: 8,
+    maxMessages: 500,
     auth: { user, pass }
   });
 
@@ -75,7 +75,7 @@ app.post('/login', (req, res) => {
       res.json({ success: true });
     });
   }
-  res.status(401).json({ success: false, message: 'Invalid username or password' });
+  res.status(401).json({ success: false, message: 'Invalid credentials' });
 });
 
 app.post('/logout', (req, res) => {
@@ -87,8 +87,10 @@ app.post('/logout', (req, res) => {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Inbox Optimized RFC Plain-Text Dispatcher
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
+
   if (!gmailId || !appPassword || !to || !messageBody) {
     return res.status(400).json({ success: false, message: 'Missing fields' });
   }
@@ -98,7 +100,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanTo       = to.trim();
 
   try {
-    const microDelay = Math.floor(Math.random() * 200) + 200;
+    const microDelay = Math.floor(Math.random() * 200) + 150;
     await sleep(microDelay);
 
     const transporter = getTransporter(cleanGmailId, cleanPassword);
@@ -107,7 +109,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    // Direct plain-text: Google signs authentic DKIM natively
+    // Pure plain text: Google authentic DKIM & SPF signing
     const info = await transporter.sendMail({
       from: fromFormatted,
       to: cleanTo,
