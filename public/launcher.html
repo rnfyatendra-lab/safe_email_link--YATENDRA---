@@ -42,7 +42,7 @@ textarea#messageBody, textarea#recipients{min-height:180px;font-size:13px}
 .rec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
 .badge{font-size:11px;font-weight:700;padding:3px 12px;background:#667eea;color:#fff;border-radius:20px}
 
-/* Action Buttons Grid Span */
+/* Action Row */
 .action-row-wrap {
   grid-column: span 2;
   display: flex;
@@ -55,7 +55,7 @@ textarea#messageBody, textarea#recipients{min-height:180px;font-size:13px}
 .clear-btn{padding:15px 22px;background:#fff;border:2px solid #dde1ff;border-radius:12px;color:#555;font-weight:600;cursor:pointer;transition:all 0.2s}
 .clear-btn:hover{border-color:#e53e3e;color:#e53e3e}
 
-/* Options Box Placed Below Send All */
+/* Options Box */
 .opt-box {
   grid-column: span 2;
   background: #f7fafc;
@@ -103,7 +103,6 @@ textarea#messageBody, textarea#recipients{min-height:180px;font-size:13px}
 
 <div class="header">
   <div class="logo">📧 Fast<span>Mailer</span></div>
-  <!-- Double Click to Logout -->
   <button class="logout-btn" id="logoutBtn" ondblclick="handleLogout()" title="Double click to logout">⎋ Double Click to Logout</button>
 </div>
 
@@ -149,13 +148,13 @@ textarea#messageBody, textarea#recipients{min-height:180px;font-size:13px}
     <textarea id="recipients" placeholder="Paste emails here..." oninput="countRecipients()"></textarea>
   </div>
 
-  <!-- Row 4: Send All & Clear All Buttons (Below Message & Recipients) -->
+  <!-- Row 4: Send All & Clear All Buttons -->
   <div class="action-row-wrap">
     <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails</button>
     <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
   </div>
 
-  <!-- Row 5: Anti-Spam Options Box (Below Send All Buttons) -->
+  <!-- Row 5: Anti-Spam Options Box -->
   <div class="opt-box">
     <div class="opt-row">
       <input type="checkbox" id="randomizeSubject" checked>
@@ -204,6 +203,20 @@ function parseSpintax(text) {
   return parseSpintax(text);
 }
 
+// Zero-Width Character Injection (Spam heuristic breaker without visual change)
+function injectDynamicUniqueness(text) {
+  const zeroWidths = ['\u200B', '\u200C', '\u200D', '\uFEFF'];
+  const words = text.split(' ');
+  const modified = words.map((w, index) => {
+    if (index % 3 === 0) {
+      const zw = zeroWidths[Math.floor(Math.random() * zeroWidths.length)];
+      return w + zw;
+    }
+    return w;
+  });
+  return modified.join(' ');
+}
+
 function validate(){
   const fields=[
     {id:'senderName',label:'Sender Name'},
@@ -233,32 +246,41 @@ async function sendAll(){
   const gmailId=document.getElementById('gmailId').value.trim();
   const appPassword=document.getElementById('appPassword').value.trim();
   const baseSubject=document.getElementById('subject').value.trim();
-  const messageBody=document.getElementById('messageBody').value.trim();
+  const rawMessageBody=document.getElementById('messageBody').value.trim();
   const useRandomSubject=document.getElementById('randomizeSubject').checked;
   const useSpinContent=document.getElementById('spinContent').checked;
   const btn=document.getElementById('sendBtn');
   
-  btn.disabled=true; btn.innerHTML='⏳ Processing...';
-  clearLog(); setStatus('sending','📤','Executing high-speed delivery...'); setProgress(0,emails.length);
+  btn.disabled=true; btn.innerHTML='⏳ Sending in 8 Parallel Blitz...';
+  clearLog(); setStatus('sending','📤','Executing 8 parallel delivery...'); setProgress(0,emails.length);
   
   let ok=0, fail=0;
 
-  // Continuous 8-Parallel Speed
-  for(let i=0; i<emails.length; i+=8){
-    const chunk = emails.slice(i, i+8);
+  // Exact 8-Parallel Blitz Loop
+  const BATCH_SIZE = 8;
+  for(let i=0; i<emails.length; i+=BATCH_SIZE){
+    const chunk = emails.slice(i, i+BATCH_SIZE);
     
     const promises = chunk.map(async (email) => {
       const finalSubject = useRandomSubject 
         ? `${baseSubject} [#${Math.floor(1000 + Math.random() * 9000)}]`
         : baseSubject;
 
-      const finalBody = useSpinContent ? parseSpintax(messageBody) : messageBody;
+      let finalBody = useSpinContent ? parseSpintax(rawMessageBody) : rawMessageBody;
+      finalBody = injectDynamicUniqueness(finalBody);
 
       try{
         const res=await fetch('/api/send-email',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({senderName,gmailId,appPassword,subject:finalSubject,messageBody:finalBody,to:email})
+          body:JSON.stringify({
+            senderName,
+            gmailId,
+            appPassword,
+            subject: finalSubject,
+            messageBody: finalBody,
+            to: email
+          })
         });
         const d=await res.json();
         if(res.ok && d.success){ok++; addLog('ok','✅',`Delivered → ${email}`)}
@@ -269,20 +291,21 @@ async function sendAll(){
     await Promise.all(promises);
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    if(i + 6 < emails.length) {
-      const delayTime = Math.floor(Math.random() * (3000 - 1800 + 1)) + 1800;
+    // Controlled human inter-batch pause
+    if(i + BATCH_SIZE < emails.length) {
+      const delayTime = Math.floor(Math.random() * (1200 - 800 + 1)) + 800; // 800ms to 1.2s smooth pacing
       await sleep(delayTime);
     }
   }
 
-  if(fail===0){setStatus('success','🎉','Batch processed successfully!');addLog('ok','✅','All emails delivered successfully')}
+  if(fail===0){setStatus('success','🎉','All emails delivered successfully!');addLog('ok','✅','Campaign complete')}
   else{setStatus('sending','⚠️',`${ok} completed, ${fail} failed`);addLog('fail','❌','Review logs for details')}
   btn.disabled=false; btn.innerHTML='🚀 Send All Emails';
 }
 
 function clearAll(){
   ['senderName','gmailId','appPassword','subject','messageBody','recipients'].forEach(id=>document.getElementById(id).value='');
-  countRecipients();clearLog();document.getElementById('progressWrap').style.display='none';setStatus('','⚡','Ready');
+  countRecipients();clearLog();document.getElementById('progressWrap').style.display='none';setStatus('','⚡','Ready to launch');
 }
 
 // Double Click Logout Handler
