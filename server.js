@@ -14,14 +14,14 @@ app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2026',
+  secret: process.env.SESSION_SECRET || 'secure-mail-console-2026',
   resave: false,
   saveUninitialized: false,
-  cookie: {
+  cookie: { 
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 1000 * 60 * 60 * 12
+    maxAge: 1000 * 60 * 60 * 12 
   }
 }));
 
@@ -36,14 +36,13 @@ function getTransporter(user, pass) {
     return transporterPool.get(cacheKey);
   }
 
-  // Gmail native secure port 465 with human concurrency limits
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
     secure: true,
     pool: true,
-    maxConnections: 3,
-    maxMessages: 100,
+    maxConnections: 8,
+    maxMessages: 500,
     auth: { user, pass }
   });
 
@@ -100,8 +99,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanTo       = to.trim();
 
   try {
-    // 250ms - 450ms human arrival variance
-    const microDelay = Math.floor(Math.random() * 200) + 250;
+    const microDelay = Math.floor(Math.random() * 200) + 200;
     await sleep(microDelay);
 
     const transporter = getTransporter(cleanGmailId, cleanPassword);
@@ -110,7 +108,6 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    // Direct RFC plain text: let Google handle native DKIM alignment & Message-ID
     const info = await transporter.sendMail({
       from: fromFormatted,
       to: cleanTo,
@@ -126,4 +123,4 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Fast Mailer running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Secure Mail Console running on port ${PORT}`));
