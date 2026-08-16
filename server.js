@@ -8,7 +8,6 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Render / HTTPS proxy trust fix
 app.set('trust proxy', 1);
 
 app.use(bodyParser.json({ limit: '10mb' }));
@@ -18,17 +17,17 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2026',
   resave: false,
   saveUninitialized: false,
-  cookie: { 
+  cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 1000 * 60 * 60 * 12 
+    maxAge: 1000 * 60 * 60 * 12
   }
 }));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// SMTP Connection Pool Cache for Speed and Reliability
+// SMTP Connection Pool Cache
 const transporterPool = new Map();
 
 function getTransporter(user, pass) {
@@ -37,11 +36,14 @@ function getTransporter(user, pass) {
     return transporterPool.get(cacheKey);
   }
 
+  // Gmail native secure port 465 with human concurrency limits
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     pool: true,
-    maxConnections: 6,
-    maxMessages: 200,
+    maxConnections: 3,
+    maxMessages: 100,
     auth: { user, pass }
   });
 
@@ -84,7 +86,9 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// Primary Inbox RFC Plain-Text Delivery
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Inbox Optimized Dispatcher
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
   if (!gmailId || !appPassword || !to || !messageBody) {
@@ -96,15 +100,21 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanTo       = to.trim();
 
   try {
+    // 250ms - 450ms human arrival variance
+    const microDelay = Math.floor(Math.random() * 200) + 250;
+    await sleep(microDelay);
+
     const transporter = getTransporter(cleanGmailId, cleanPassword);
 
     const fromFormatted = senderName && senderName.trim()
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
+    // Direct RFC plain text: let Google handle native DKIM alignment & Message-ID
     const info = await transporter.sendMail({
       from: fromFormatted,
       to: cleanTo,
+      replyTo: cleanGmailId,
       subject: subject ? subject.trim() : '',
       text: messageBody.trim()
     });
