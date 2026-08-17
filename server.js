@@ -1,54 +1,22 @@
-const express = require('express');
-const session = require('express-session');
+const express    = require('express');
+const session    = require('express-session');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
-const path = require('path');
+const path       = require('path');
 require('dotenv').config();
 
-const app = express();
+const app  = express();
 const PORT = process.env.PORT || 3000;
 
-app.set('trust proxy', 1);
-
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
-
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-ultra-secure-2026',
+  secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2024',
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 1000 * 60 * 60 * 12
-  }
+  cookie: { secure: false, maxAge: 1000 * 60 * 60 * 8 }
 }));
-
 app.use(express.static(path.join(__dirname, 'public')));
-
-// 8-Socket Persistent SSL SMTP Pool
-const transporterPool = new Map();
-
-function getTransporter(user, pass) {
-  const cacheKey = `${user}:${pass}`;
-  if (transporterPool.has(cacheKey)) {
-    return transporterPool.get(cacheKey);
-  }
-
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    pool: true,
-    maxConnections: 8,
-    maxMessages: 500,
-    auth: { user, pass }
-  });
-
-  transporterPool.set(cacheKey, transporter);
-  return transporter;
-}
 
 function requireLogin(req, res, next) {
   if (req.session?.loggedIn) return next();
@@ -70,62 +38,39 @@ app.post('/login', (req, res) => {
   const validPass = process.env.ADMIN_PASS || 'rrrr';
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
-    return req.session.save((err) => {
-      if (err) return res.status(500).json({ success: false, message: 'Session error' });
-      res.json({ success: true });
-    });
+    return res.json({ success: true });
   }
-  res.status(401).json({ success: false, message: 'Invalid credentials' });
+  res.json({ success: false, message: 'Invalid username or password' });
 });
 
 app.post('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.clearCookie('connect.sid');
-    res.json({ success: true });
-  });
+  req.session.destroy(() => res.json({ success: true }));
 });
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// Inbox Optimized Dispatcher with 2-3% Larger Letter Size
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
-
-  if (!gmailId || !appPassword || !to || !messageBody) {
+  if (!gmailId || !appPassword || !to)
     return res.status(400).json({ success: false, message: 'Missing fields' });
-  }
 
-  const cleanGmailId  = gmailId.trim();
-  const cleanPassword = appPassword.replace(/\s+/g, '');
-  const cleanTo       = to.trim();
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: gmailId, pass: appPassword }
+  });
 
   try {
-    const microDelay = Math.floor(Math.random() * 50) + 170;
-    await sleep(microDelay);
-
-    const transporter = getTransporter(cleanGmailId, cleanPassword);
-
-    const fromFormatted = senderName && senderName.trim()
-      ? `"${senderName.trim()}" <${cleanGmailId}>`
-      : cleanGmailId;
-
-    // Formatting with 2-3% larger readable font size (15.5px) + plain text fallback
-    const formattedHtml = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15.5px; line-height: 1.65; color: #1a1a1a; white-space: pre-wrap;">${messageBody.trim()}</div>`;
-
-    const info = await transporter.sendMail({
-      from: fromFormatted,
-      to: cleanTo,
-      replyTo: cleanGmailId,
-      subject: subject ? subject.trim() : '',
-      text: messageBody.trim(),
-      html: formattedHtml
+    await transporter.sendMail({
+      from: senderName ? `"${senderName}" <${gmailId}>` : `"${gmailId}" <${gmailId}>`,
+      to,
+      subject,
+      text: messageBody
+      // HTML nahi — plain text = personal email = Primary inbox
+      // Koi bulk/newsletter headers nahi
     });
-
-    res.json({ success: true, messageId: info.messageId });
+    res.json({ success: true });
   } catch (err) {
-    console.error(`❌ ${cleanTo}:`, err.message);
+    console.error(`❌ ${to}:`, err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Fast Mailer running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Fast Mailer on port ${PORT}`));
