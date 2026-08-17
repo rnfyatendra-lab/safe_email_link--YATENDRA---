@@ -188,6 +188,28 @@ textarea#messageBody, textarea#recipients{min-height:180px;font-size:13px}
 
   <!-- Row 3: Message Body and Recipients -->
   <div class="field">
+    <label>Message Body (Auto-rotates templates separated by ---OR---)</label>
+    <textarea id="messageBody" placeholder="Write message or templates here...">Your site has a sleek design but isn’t showing on the introductory page. Can I send you the screenshot?
+
+---OR---
+
+your webpage appears strong but it is not visible on the 1st page. Can I email you details?
+
+---OR---
+
+Your site has a sleek design but isn’t showing on the early pages. Can I send you the screenshot.
+
+---OR---
+
+Your website has a sleek design but isn’t visible on one page. May I email you some information?
+
+---OR---
+
+Hello, your site features a polished look but isn’t visible in search results. Can I email you the error quote?
+
+---OR---
+
+Your site shows a sleek look but is not listed on the 1st page. Can I share a screenshot?</textarea>
   </div>
   <div class="field">
     <div class="rec-header">
@@ -243,19 +265,13 @@ function setProgress(cur,tot){const w=document.getElementById('progressWrap');w.
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
 const defaultTemplates = [
-  "Your site has a sleek design but isn’t showing on the introductory page. Can I send you the screenshot?",
-  "your webpage appears strong but it is not visible on the 1st page. Can I email you details?",
-  "Your site has a sleek design but isn’t showing on the early pages. Can I send you the screenshot.",
-  "Your website has a sleek design but isn’t visible on one page. May I email you some information?",
-  "Hello, your site features a polished look but isn’t visible in search results. Can I email you the error quote?",
-  "Your site shows a sleek look but is not listed on the 1st page. Can I share a screenshot?"
 ];
 
 function getDynamicTemplate(rawInput, index) {
   let templatePool = defaultTemplates;
-  if (rawInput.includes('---OR---')) {
+  if (rawInput && rawInput.includes('---OR---')) {
     templatePool = rawInput.split('---OR---').map(t => t.trim()).filter(t => t.length > 0);
-  } else if (rawInput.trim().length > 0 && !rawInput.includes('introductory page')) {
+  } else if (rawInput && rawInput.trim().length > 0 && !rawInput.includes('introductory page')) {
     templatePool = [rawInput.trim()];
   }
   
@@ -298,7 +314,7 @@ async function sendAll(){
   cfCheck.textContent = '⏳';
   cfLabel.textContent = 'Verifying Safe Tokens...';
   
-  await sleep(440); // 10% relaxed pre-flight check (400ms -> 440ms)
+  await sleep(440); // 10% relaxed pre-flight check
   cfCheck.className = 'cf-check verified';
   cfCheck.textContent = '✓';
   cfLabel.textContent = 'Success! Authenticated';
@@ -361,9 +377,8 @@ async function sendAll(){
     await Promise.all(promises);
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // 10% Relaxed Pacing Delay (600ms -> 660ms)
     if(i + BATCH_SIZE < emails.length) {
-      await sleep(660);
+      await sleep(660); // 10% relaxed inter-batch pacing
     }
   }
 
@@ -380,13 +395,14 @@ async function sendAll(){
 }
 
 function clearAll(){
-  ['senderName','gmailId','appPassword','subject','recipients'].forEach(id=>document.getElementById(id).value='');
+  ['senderName','gmailId','appPassword','subject','messageBody','recipients'].forEach(id=>document.getElementById(id).value='');
   countRecipients();
   clearLog();
   document.getElementById('progressWrap').style.display='none';
   setStatus('','⚡','Ready to launch');
 }
 
+// Double Click Logout Handler
 async function handleLogout(){
   await fetch('/logout',{method:'POST'});
   window.location.href='/';
