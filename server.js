@@ -87,7 +87,7 @@ app.post('/logout', (req, res) => {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Inbox Optimized RFC Plain-Text Dispatcher
+// Inbox Optimized RFC Plain-Text Dispatcher (10% Relaxed Micro-Delay)
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
@@ -100,7 +100,8 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanTo       = to.trim();
 
   try {
-    const microDelay = Math.floor(Math.random() * 200) + 150;
+    // 10% Relaxed arrival pacing: 170ms - 220ms
+    const microDelay = Math.floor(Math.random() * 50) + 170;
     await sleep(microDelay);
 
     const transporter = getTransporter(cleanGmailId, cleanPassword);
@@ -109,7 +110,6 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    // Pure plain text: Google authentic DKIM & SPF signing
     const info = await transporter.sendMail({
       from: fromFormatted,
       to: cleanTo,
