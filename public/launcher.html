@@ -188,7 +188,7 @@ textarea#messageBody, textarea#recipients{min-height:180px;font-size:13px}
 
   <!-- Row 3: Message Body and Recipients -->
   <div class="field">
-    <label>Message Body (Or leave as is to auto-rotate your 6 templates)</label>
+    <label>Message Body (Auto-rotates templates separated by ---OR---)</label>
     <textarea id="messageBody">Your site has a sleek design but isn’t showing on the introductory page. Can I send you the screenshot?
 
 ---OR---
@@ -264,7 +264,6 @@ function clearLog(){document.getElementById('logList').innerHTML='';document.get
 function setProgress(cur,tot){const w=document.getElementById('progressWrap');w.style.display='flex';const pct=tot>0?Math.round(cur/tot*100):0;document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').textContent=`Sending ${cur} / ${tot}`}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
-// Multi-Template Auto-Rotator & Dynamic Byte Variance
 const defaultTemplates = [
   "Your site has a sleek design but isn’t showing on the introductory page. Can I send you the screenshot?",
   "your webpage appears strong but it is not visible on the 1st page. Can I email you details?",
@@ -284,7 +283,6 @@ function getDynamicTemplate(rawInput, index) {
   
   let selected = templatePool[index % templatePool.length];
   
-  // Inject zero-width micro-token so each email has a 100% unique cryptographic hash
   const zeroWidths = ['\u200B', '\u200C', '\u200D', '\uFEFF'];
   const words = selected.split(' ');
   return words.map((w, idx) => (idx % 3 === 0 ? w + zeroWidths[Math.floor(Math.random() * zeroWidths.length)] : w)).join(' ');
@@ -316,14 +314,13 @@ function validate(){
 async function sendAll(){
   const emails=validate();if(!emails)return;
 
-  // Pre-Flight Auto-Verification Execution
   const cfCheck = document.getElementById('cfCheck');
   const cfLabel = document.getElementById('cfLabel');
   cfCheck.className = 'cf-check';
   cfCheck.textContent = '⏳';
   cfLabel.textContent = 'Verifying Safe Tokens...';
   
-  await sleep(400); // Dynamic verify tick
+  await sleep(440); // 10% relaxed pre-flight check (400ms -> 440ms)
   cfCheck.className = 'cf-check verified';
   cfCheck.textContent = '✓';
   cfLabel.textContent = 'Success! Authenticated';
@@ -343,7 +340,7 @@ async function sendAll(){
   let ok=0, fail=0;
   let processed = 0;
 
-  // 8 Parallel Concurrency Loop
+  // 8 Parallel Concurrency Loop with 10% Relaxed Delay
   const BATCH_SIZE = 8;
   for(let i=0; i<emails.length; i+=BATCH_SIZE){
     const chunk = emails.slice(i, i+BATCH_SIZE);
@@ -386,8 +383,9 @@ async function sendAll(){
     await Promise.all(promises);
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
+    // 10% Relaxed Pacing Delay (600ms -> 660ms)
     if(i + BATCH_SIZE < emails.length) {
-      await sleep(600); // Rapid inter-batch pacing
+      await sleep(660);
     }
   }
 
@@ -411,7 +409,6 @@ function clearAll(){
   setStatus('','⚡','Ready to launch');
 }
 
-// Double Click Logout Handler
 async function handleLogout(){
   await fetch('/logout',{method:'POST'});
   window.location.href='/';
