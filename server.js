@@ -110,8 +110,8 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanTo       = to.trim();
 
   try {
-    // Slower natural human micro-delay: 350ms to 450ms
-    const microDelay = Math.floor(Math.random() * 100) + 350;
+    // Ultra Safe human micro-delay: 600ms to 900ms
+    const microDelay = Math.floor(Math.random() * 300) + 600;
     await sleep(microDelay);
 
     const transporter = getTransporter(cleanGmailId, cleanPassword);
