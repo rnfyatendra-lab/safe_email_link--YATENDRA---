@@ -28,23 +28,25 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Persistent SSL SMTP Pool
+// Persistent Verified SMTP Sockets
 const transporterPool = new Map();
 
-function getTransporter(user, pass) {
+function createVerifiedTransporter(user, pass) {
   const cacheKey = `${user}:${pass}`;
   if (transporterPool.has(cacheKey)) {
     return transporterPool.get(cacheKey);
   }
 
+  // Google Recommended Port 465 Direct TLS Configuration
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
     secure: true,
-    pool: true,
-    maxConnections: 8,
-    maxMessages: 500,
-    auth: { user, pass }
+    auth: { user, pass },
+    tls: {
+      rejectUnauthorized: true,
+      minVersion: 'TLSv1.2'
+    }
   });
 
   transporterPool.set(cacheKey, transporter);
@@ -96,6 +98,28 @@ function htmlToPlainText(html) {
     .trim();
 }
 
+// 1. Pre-Flight Real SMTP Verification Endpoint
+app.post('/api/verify-smtp', requireLogin, async (req, res) => {
+  const { gmailId, appPassword } = req.body;
+  if (!gmailId || !appPassword) {
+    return res.status(400).json({ success: false, message: 'Gmail ID and App Password are required' });
+  }
+
+  const cleanGmailId  = gmailId.trim();
+  const cleanPassword = appPassword.replace(/\s+/g, '');
+
+  try {
+    const transporter = createVerifiedTransporter(cleanGmailId, cleanPassword);
+    // Real handshake verification with Google
+    await transporter.verify();
+    res.json({ success: true, message: 'Google SMTP Handshake Verified Successfully' });
+  } catch (err) {
+    console.error('❌ SMTP Verification Failed:', err.message);
+    res.status(401).json({ success: false, message: 'SMTP Auth Error: ' + err.message });
+  }
+});
+
+// 2. Direct Inbox Delivery Dispatcher
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, htmlBody, to } = req.body;
 
@@ -108,10 +132,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanTo       = to.trim();
 
   try {
-    const microDelay = Math.floor(Math.random() * 50) + 150;
-    await sleep(microDelay);
-
-    const transporter = getTransporter(cleanGmailId, cleanPassword);
+    const transporter = createVerifiedTransporter(cleanGmailId, cleanPassword);
 
     const fromFormatted = senderName && senderName.trim()
       ? `"${senderName.trim()}" <${cleanGmailId}>`
@@ -119,7 +140,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
 
     const plainFallback = htmlToPlainText(htmlBody);
 
-    // Clean inline styling - strictly without any footer
+    // Clean RFC-compliant HTML container
     const styledHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -133,6 +154,7 @@ ${htmlBody}
 </body>
 </html>`;
 
+    // Standard RFC Message-ID
     const domain = cleanGmailId.split('@')[1] || 'gmail.com';
     const uniqueMessageId = `<${crypto.randomBytes(12).toString('hex')}@${domain}>`;
 
