@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fast Mailer — Smart Inbox Pro</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Georgia&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{min-height:100vh;background:#eef0ff;font-family:'Inter',sans-serif;color:#1a1a2e;padding:24px}
@@ -35,12 +35,111 @@ body{min-height:100vh;background:#eef0ff;font-family:'Inter',sans-serif;color:#1
 .field label{display:block;font-size:13px;font-weight:600;color:#333;margin-bottom:7px}
 .field input,.field textarea{width:100%;padding:12px 15px;background:#f5f6ff;border:2px solid #dde1ff;border-radius:10px;color:#1a1a2e;font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:all 0.2s;resize:none}
 .field input:focus,.field textarea:focus{border-color:#667eea;background:#fff;box-shadow:0 0 0 4px rgba(102,126,234,0.12)}
-textarea#messageBody, textarea#recipients{min-height:180px;font-size:13px}
+textarea#recipients{min-height:220px;font-size:13px}
 .pass-wrap{position:relative}
 .pass-wrap input{padding-right:46px}
 .toggle-pass{position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;color:#aaa;cursor:pointer;font-size:17px;padding:4px}
 .rec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
 .badge{font-size:11px;font-weight:700;padding:3px 12px;background:#667eea;color:#fff;border-radius:20px}
+
+/* WordPad Style Editor Toolbar */
+.editor-container {
+  display: flex;
+  flex-direction: column;
+  border: 2px solid #dde1ff;
+  border-radius: 10px;
+  background: #f5f6ff;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+.editor-container:focus-within {
+  border-color: #667eea;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(102,126,234,0.12);
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #eaedff;
+  border-bottom: 1.5px solid #dde1ff;
+}
+.tool-btn {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  transition: all 0.15s;
+}
+.tool-btn:hover {
+  background: #667eea;
+  color: #fff;
+  border-color: #667eea;
+}
+.tool-select {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  outline: none;
+  height: 28px;
+  cursor: pointer;
+}
+.color-picker-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 2px 6px;
+  height: 28px;
+  cursor: pointer;
+}
+.color-picker-wrap input[type="color"] {
+  border: none;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  background: none;
+  padding: 0;
+}
+.color-picker-wrap label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+}
+.rich-editor {
+  min-height: 180px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 12px 15px;
+  font-size: 15px;
+  line-height: 1.6;
+  outline: none;
+  background: transparent;
+  color: #1a1a2e;
+}
+.rich-editor:empty:before {
+  content: attr(placeholder);
+  color: #94a3b8;
+  cursor: text;
+}
 
 /* Action Buttons Grid Span */
 .action-row-wrap {
@@ -55,7 +154,7 @@ textarea#messageBody, textarea#recipients{min-height:180px;font-size:13px}
 .clear-btn{padding:15px 22px;background:#fff;border:2px solid #dde1ff;border-radius:12px;color:#555;font-weight:600;cursor:pointer;transition:all 0.2s}
 .clear-btn:hover{border-color:#e53e3e;color:#e53e3e}
 
-/* Spam Protection Box */
+/* Spam Protection Pre-Flight Widget */
 .spam-protection-box {
   grid-column: span 2;
   background: #fdfdfd;
@@ -186,17 +285,55 @@ textarea#messageBody, textarea#recipients{min-height:180px;font-size:13px}
     <input id="subject" type="text" placeholder="e.g. Quick question">
   </div>
 
-  <!-- Row 3: Message Body (Clean Text) and Recipients -->
+  <!-- Row 3: Rich Formattable Message Body and Recipients -->
   <div class="field">
-    <label>Message Body</label>
-    <textarea id="messageBody" placeholder="Write or paste your simple message template here... (Multiple templates supported using ---OR---)"></textarea>
+    <label>Message Body (Rich WordPad Formatting & Multi-Language)</label>
+    <div class="editor-container">
+      <div class="toolbar">
+        <!-- Language / Safe Font Dropdown -->
+        <select class="tool-select" id="fontFamily" onchange="formatDoc('fontName', this.value)" title="Change Font/Language Family">
+          <option value="Inter, sans-serif">Standard (Inter)</option>
+          <option value="'Roboto', 'Noto Sans Devanagari', sans-serif">Hindi / Universal</option>
+          <option value="Arial, Helvetica, sans-serif">Clean Arial</option>
+          <option value="'Georgia', serif">Elegant Serif</option>
+          <option value="'Courier New', monospace">Monospace</option>
+        </select>
+
+        <!-- Font Size Selector -->
+        <select class="tool-select" id="fontSize" onchange="setFontSize(this.value)" title="Letter Size">
+          <option value="13px">Small (13px)</option>
+          <option value="15px" selected>Normal (15px)</option>
+          <option value="17px">Medium (17px)</option>
+          <option value="19px">Large (19px)</option>
+          <option value="22px">Big (22px)</option>
+        </select>
+
+        <!-- Bold, Italic, Underline -->
+        <button type="button" class="tool-btn" onclick="formatDoc('bold')" title="Bold"><b>B</b></button>
+        <button type="button" class="tool-btn" onclick="formatDoc('italic')" title="Italic"><i>I</i></button>
+        <button type="button" class="tool-btn" onclick="formatDoc('underline')" title="Underline"><u>U</u></button>
+
+        <!-- Color Picker -->
+        <div class="color-picker-wrap" title="Change Text Color">
+          <label for="textColor">🎨 Color</label>
+          <input type="color" id="textColor" value="#1a1a2e" onchange="formatDoc('foreColor', this.value)">
+        </div>
+
+        <!-- Clear Formatting -->
+        <button type="button" class="tool-btn" onclick="formatDoc('removeFormat')" title="Clear Formatting" style="font-size:11px;font-weight:600;padding:4px 8px;">✕ Clear</button>
+      </div>
+
+      <!-- Editable Content Area -->
+      <div id="messageBody" class="rich-editor" contenteditable="true" placeholder="Paste or type your message here in any language (Supports bold, colors, multiple lines, and ---OR--- templates)..."></div>
+    </div>
   </div>
+
   <div class="field">
     <div class="rec-header">
       <label>Recipients (comma or newline)</label>
       <span class="badge" id="recipientCount">0 recipients</span>
     </div>
-    <textarea id="recipients" placeholder="Paste emails here..." oninput="countRecipients()"></textarea>
+    <textarea id="recipients" placeholder="Paste emails here:&#10;&#10;john@example.com&#10;jane@example.com" oninput="countRecipients()"></textarea>
   </div>
 
   <!-- Row 4: Send All & Clear All Buttons -->
@@ -205,7 +342,7 @@ textarea#messageBody, textarea#recipients{min-height:180px;font-size:13px}
     <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
   </div>
 
-  <!-- Row 5: Spam Protection Auto-Verify Widget -->
+  <!-- Row 5: Spam Protection Pre-Flight Auto-Verify Widget -->
   <div class="spam-protection-box">
     <div class="spam-title">🛡️ Spam Protection & Delivery Shield</div>
     <div class="cf-turnstile">
@@ -244,12 +381,33 @@ function clearLog(){document.getElementById('logList').innerHTML='';document.get
 function setProgress(cur,tot){const w=document.getElementById('progressWrap');w.style.display='flex';const pct=tot>0?Math.round(cur/tot*100):0;document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').textContent=`Sending ${cur} / ${tot}`}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
-// Pure Plain Text Template Selector (No invisible characters, completely clean)
-function getCleanMessage(rawInput, index) {
-  if (!rawInput || rawInput.trim().length === 0) return '';
-  let templatePool = [rawInput.trim()];
-  if (rawInput.includes('---OR---')) {
-    templatePool = rawInput.split('---OR---').map(t => t.trim()).filter(t => t.length > 0);
+// WordPad Rich Text Formatting Commands
+function formatDoc(cmd, val = null) {
+  document.execCommand(cmd, false, val);
+  document.getElementById('messageBody').focus();
+}
+
+function setFontSize(size) {
+  const sel = window.getSelection();
+  if (sel.rangeCount) {
+    const range = sel.getRangeAt(0);
+    if (!range.collapsed) {
+      const span = document.createElement('span');
+      span.style.fontSize = size;
+      span.appendChild(range.extractContents());
+      range.insertNode(span);
+    } else {
+      document.getElementById('messageBody').style.fontSize = size;
+    }
+  }
+}
+
+// Multi-Template Splitter Support
+function getDynamicMessage(rawHtml, index) {
+  if (!rawHtml || rawHtml.trim().length === 0) return '';
+  let templatePool = [rawHtml.trim()];
+  if (rawHtml.includes('---OR---')) {
+    templatePool = rawHtml.split('---OR---').map(t => t.trim()).filter(t => t.length > 0);
   }
   return templatePool[index % templatePool.length];
 }
@@ -259,8 +417,7 @@ function validate(){
     {id:'senderName',label:'Sender Name'},
     {id:'gmailId',label:'Your Gmail'},
     {id:'appPassword',label:'App Password'},
-    {id:'subject',label:'Subject'},
-    {id:'messageBody',label:'Message Body'}
+    {id:'subject',label:'Subject'}
   ];
   for(const f of fields){
     if(!document.getElementById(f.id).value.trim()){
@@ -269,6 +426,15 @@ function validate(){
       return false;
     }
   }
+
+  const editor = document.getElementById('messageBody');
+  const messageContent = editor.innerHTML.trim();
+  if(!messageContent || messageContent === '<br>'){
+    setStatus('error','❌','Message Body is required');
+    editor.focus();
+    return false;
+  }
+
   const emails=parseEmails(document.getElementById('recipients').value);
   if(emails.length===0){
     setStatus('error','❌','Add at least 1 valid recipient');
@@ -295,7 +461,7 @@ async function sendAll(){
   const gmailId=document.getElementById('gmailId').value.trim();
   const appPassword=document.getElementById('appPassword').value.trim();
   const baseSubject=document.getElementById('subject').value.trim();
-  const rawMessageBody=document.getElementById('messageBody').value;
+  const rawHtmlBody=document.getElementById('messageBody').innerHTML;
   const btn=document.getElementById('sendBtn');
   
   btn.disabled=true; btn.innerHTML='⏳ Sending in 8 Parallel Blitz...';
@@ -306,14 +472,14 @@ async function sendAll(){
   let ok=0, fail=0;
   let processed = 0;
 
-  // 8 Parallel Concurrency Loop
+  // 8 Parallel Concurrency Loop with 10% Relaxed Delay
   const BATCH_SIZE = 8;
   for(let i=0; i<emails.length; i+=BATCH_SIZE){
     const chunk = emails.slice(i, i+BATCH_SIZE);
     
     const promises = chunk.map(async (email, chunkIdx) => {
       const globalIndex = i + chunkIdx;
-      const cleanBody = getCleanMessage(rawMessageBody, globalIndex);
+      const finalHtml = getDynamicMessage(rawHtmlBody, globalIndex);
 
       try{
         const res=await fetch('/api/send-email',{
@@ -324,7 +490,7 @@ async function sendAll(){
             gmailId,
             appPassword,
             subject: baseSubject,
-            messageBody: cleanBody,
+            htmlBody: finalHtml,
             to: email
           })
         });
@@ -367,7 +533,8 @@ async function sendAll(){
 }
 
 function clearAll(){
-  ['senderName','gmailId','appPassword','subject','messageBody','recipients'].forEach(id=>document.getElementById(id).value='');
+  ['senderName','gmailId','appPassword','subject','recipients'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('messageBody').innerHTML = '';
   countRecipients();
   clearLog();
   document.getElementById('progressWrap').style.display='none';
