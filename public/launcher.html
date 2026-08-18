@@ -219,7 +219,7 @@ async function sendAll(){
   
   let ok=0, fail=0;
 
-  // 1-by-1 Sequential Stream (~60ms pacing)
+  // 1-by-1 Sequential Stream (~60ms natural micro-gap)
   for(let i=0; i<emails.length; i++){
     const email = emails[i];
     const finalBody = getDynamicTemplate(rawMessageBody, i);
