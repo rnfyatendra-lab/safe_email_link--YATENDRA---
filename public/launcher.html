@@ -254,7 +254,7 @@ async function sendAll(){
     setStatus('sending','📤',`Sending... (${i+1}/${emails.length})`);
 
     if(i + 1 < emails.length) {
-      await sleep(180);
+      await sleep(100);
     }
   }
 
