@@ -10,12 +10,11 @@ const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
 
-// Limit 50MB for HD Images/PNG
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-perfect-img-2026',
+  secret: process.env.SESSION_SECRET || 'fast-mailer-clean-core-2026',
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -84,44 +83,11 @@ app.post('/logout', (req, res) => {
   });
 });
 
-function htmlToPlainText(html) {
-  return html
-    .replace(/<img[^>]*>/gi, '')
-    .replace(/<br\s*[\/]?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<[^>]+>/g, '')
-    .trim();
-}
-
-// Perfect CID Inline Image Parser (Gmail Native Support)
-function processInlineImages(htmlContent) {
-  const attachments = [];
-  let imgIndex = 0;
-
-  const processedHtml = htmlContent.replace(/<img([^>]+)src=["']data:image\/(png|jpeg|jpg|webp|gif);base64,([^"']+)["']([^>]*)>/gi, (fullMatch, prefix, format, base64Data, suffix) => {
-    imgIndex++;
-    const cidName = `inline_photo_${Date.now()}_${imgIndex}`;
-    const filename = `photo_${imgIndex}.${format}`;
-
-    attachments.push({
-      filename: filename,
-      content: Buffer.from(base64Data, 'base64'),
-      cid: cidName,
-      contentType: `image/${format}`,
-      contentDisposition: 'inline'
-    });
-
-    return `<img${prefix}src="cid:${cidName}"${suffix} style="max-width:100%;height:auto;display:block;border-radius:6px;margin:8px 0;">`;
-  });
-
-  return { processedHtml, attachments };
-}
-
-// 1-by-1 Native Dispatcher
+// Pure Clean Text Dispatcher (Zero Spam Signals, Native Google Signature)
 app.post('/api/send-email', requireLogin, async (req, res) => {
-  const { senderName, gmailId, appPassword, subject, htmlBody, to } = req.body;
+  const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
-  if (!gmailId || !appPassword || !to || !htmlBody) {
+  if (!gmailId || !appPassword || !to || !messageBody) {
     return res.status(400).json({ success: false, message: 'Missing fields' });
   }
 
@@ -136,30 +102,11 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    const { processedHtml, attachments } = processInlineImages(htmlBody);
-    const plainFallback = htmlToPlainText(htmlBody);
-
-    const styledHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.65;font-size:15px;">
-<div style="padding:4px 0;word-break:break-word;">
-${processedHtml}
-</div>
-</body>
-</html>`;
-
     const info = await transporter.sendMail({
       from: fromFormatted,
       to: cleanTo,
       subject: subject ? subject.trim() : '',
-      text: plainFallback,
-      html: styledHtml,
-      attachments: attachments,
-      encoding: 'utf-8'
+      text: messageBody.trim()
     });
 
     res.json({ success: true, messageId: info.messageId });
@@ -169,4 +116,4 @@ ${processedHtml}
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Fast Mailer running cleanly on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Fast Mailer running on port ${PORT}`));
