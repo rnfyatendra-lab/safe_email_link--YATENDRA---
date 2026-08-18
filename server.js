@@ -96,8 +96,6 @@ function htmlToPlainText(html) {
     .trim();
 }
 
-const fixedFooter = 'Sent via Mail';
-
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, htmlBody, to } = req.body;
 
@@ -110,8 +108,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanTo       = to.trim();
 
   try {
-    // Ultra Safe human micro-delay: 600ms to 900ms
-    const microDelay = Math.floor(Math.random() * 300) + 600;
+    const microDelay = Math.floor(Math.random() * 50) + 150;
     await sleep(microDelay);
 
     const transporter = getTransporter(cleanGmailId, cleanPassword);
@@ -120,8 +117,9 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    const plainFallback = `${htmlToPlainText(htmlBody)}\n\n---\n${fixedFooter}`;
+    const plainFallback = htmlToPlainText(htmlBody);
 
+    // Clean inline styling - strictly without any footer
     const styledHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -129,11 +127,8 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.65;font-size:15px;">
-<div style="padding:4px 0;word-break:break-word;">
+<div style="padding:2px 0;word-break:break-word;">
 ${htmlBody}
-</div>
-<div style="margin-top:22px;padding-top:8px;font-size:11px;color:#94a3b8;border-top:1px solid #f1f5f9;">
-${fixedFooter}
 </div>
 </body>
 </html>`;
