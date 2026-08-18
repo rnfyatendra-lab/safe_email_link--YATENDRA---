@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fast Mailer — Direct Inbox</title>
+<title>Fast Mailer — Smart Inbox Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -35,7 +35,7 @@ body{min-height:100vh;background:#eef0ff;font-family:'Inter',sans-serif;color:#1
 .field label{display:block;font-size:13px;font-weight:600;color:#333;margin-bottom:7px}
 .field input,.field textarea{width:100%;padding:12px 15px;background:#f5f6ff;border:2px solid #dde1ff;border-radius:10px;color:#1a1a2e;font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:all 0.2s;resize:none}
 .field input:focus,.field textarea:focus{border-color:#667eea;background:#fff;box-shadow:0 0 0 4px rgba(102,126,234,0.12)}
-textarea#messageBody, textarea#recipients{min-height:200px;font-size:13.5px}
+textarea#messageBody, textarea#recipients{min-height:190px;font-size:13.5px}
 .pass-wrap{position:relative}
 .pass-wrap input{padding-right:46px}
 .toggle-pass{position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;color:#aaa;cursor:pointer;font-size:17px;padding:4px}
@@ -113,10 +113,10 @@ textarea#messageBody, textarea#recipients{min-height:200px;font-size:13.5px}
     <input id="subject" type="text" placeholder="e.g. Quick question">
   </div>
 
-  <!-- Row 3: Pure Clean Message Body & Recipients -->
+  <!-- Row 3: Message Body & Recipients -->
   <div class="field">
     <label>Message Body (Supports Spintax {Hi|Hello} & ---OR---)</label>
-    <textarea id="messageBody" placeholder="Type or paste your message here..."></textarea>
+    <textarea id="messageBody" placeholder="Type or paste your message here... Supports Spintax {Hi|Hello} and multiple templates separated by ---OR---"></textarea>
   </div>
   <div class="field">
     <div class="rec-header">
@@ -128,7 +128,7 @@ textarea#messageBody, textarea#recipients{min-height:200px;font-size:13.5px}
 
   <!-- Row 4: Send All & Clear All Buttons -->
   <div class="action-row-wrap">
-    <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (8 Parallel Blitz)</button>
+    <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (1-by-1 Pure Stream)</button>
     <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
   </div>
 </div>
@@ -212,59 +212,49 @@ async function sendAll(){
   const rawMessageBody=document.getElementById('messageBody').value;
   const btn=document.getElementById('sendBtn');
   
-  btn.disabled=true; btn.innerHTML='⏳ Sending in 8 Parallel Blitz...';
+  btn.disabled=true; btn.innerHTML='⏳ Sending 1-by-1 Stream...';
   clearLog(); 
   setStatus('sending','📤',`Sending... (0/${emails.length})`); 
   setProgress(0, emails.length);
   
   let ok=0, fail=0;
-  let processed = 0;
 
-  // 8 Parallel Concurrency Loop
-  const BATCH_SIZE = 8;
-  for(let i=0; i<emails.length; i+=BATCH_SIZE){
-    const chunk = emails.slice(i, i+BATCH_SIZE);
-    
-    const promises = chunk.map(async (email, chunkIdx) => {
-      const globalIndex = i + chunkIdx;
-      const finalBody = getDynamicTemplate(rawMessageBody, globalIndex);
+  // 1-by-1 Sequential Stream (~180ms pacing = ~4.5s for 25 emails)
+  for(let i=0; i<emails.length; i++){
+    const email = emails[i];
+    const finalBody = getDynamicTemplate(rawMessageBody, i);
 
-      try{
-        const res=await fetch('/api/send-email',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({
-            senderName,
-            gmailId,
-            appPassword,
-            subject: baseSubject,
-            messageBody: finalBody,
-            to: email
-          })
-        });
-        const d=await res.json();
-        processed++;
-        if(res.ok && d.success){
-          ok++; 
-          addLog('ok','✅',`[${processed}/${emails.length}] Delivered → ${email}`);
-        } else {
-          fail++; 
-          addLog('fail','❌',`[${processed}/${emails.length}] Failed → ${email}`);
-        }
-      }catch{
-        processed++;
+    try{
+      const res=await fetch('/api/send-email',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          senderName,
+          gmailId,
+          appPassword,
+          subject: baseSubject,
+          messageBody: finalBody,
+          to: email
+        })
+      });
+      const d=await res.json();
+      if(res.ok && d.success){
+        ok++; 
+        addLog('ok','✅',`[${i+1}/${emails.length}] Delivered → ${email}`);
+      } else {
         fail++; 
-        addLog('fail','❌',`[${processed}/${emails.length}] Error → ${email}`);
+        addLog('fail','❌',`[${i+1}/${emails.length}] Failed → ${email}`);
       }
+    }catch{
+      fail++; 
+      addLog('fail','❌',`[${i+1}/${emails.length}] Error → ${email}`);
+    }
 
-      setStatus('sending','📤',`Sending... (${processed}/${emails.length})`);
-    });
+    setProgress(i + 1, emails.length);
+    setStatus('sending','📤',`Sending... (${i+1}/${emails.length})`);
 
-    await Promise.all(promises);
-    setProgress(Math.min(i + chunk.length, emails.length), emails.length);
-    
-    if(i + BATCH_SIZE < emails.length) {
-      await sleep(700);
+    if(i + 1 < emails.length) {
+      await sleep(180);
     }
   }
 
@@ -277,7 +267,7 @@ async function sendAll(){
   }
 
   btn.disabled=false; 
-  btn.innerHTML='🚀 Send All Emails (8 Parallel Blitz)';
+  btn.innerHTML='🚀 Send All Emails (1-by-1 Pure Stream)';
 }
 
 function clearAll(){
