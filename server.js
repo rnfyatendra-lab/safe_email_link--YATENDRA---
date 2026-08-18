@@ -10,8 +10,9 @@ const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
 
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+// Limit badha di gayi hai taaki pasted PNG / Images smooth upload hon
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fast-mailer-clean-single-2026',
@@ -27,7 +28,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Clean Single Persistent Transporter Pool
+// Persistent Single Transporter Pool
 const transporterPool = new Map();
 
 function getTransporter(user, pass) {
@@ -83,11 +84,20 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// Pure 1-by-1 Native Dispatcher
-app.post('/api/send-email', requireLogin, async (req, res) => {
-  const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
+function htmlToPlainText(html) {
+  return html
+    .replace(/<img[^>]*>/gi, '[Image]')
+    .replace(/<br\s*[\/]?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .trim();
+}
 
-  if (!gmailId || !appPassword || !to || !messageBody) {
+// 1-by-1 Inline PNG & Rich Content Dispatcher
+app.post('/api/send-email', requireLogin, async (req, res) => {
+  const { senderName, gmailId, appPassword, subject, htmlBody, to } = req.body;
+
+  if (!gmailId || !appPassword || !to || !htmlBody) {
     return res.status(400).json({ success: false, message: 'Missing fields' });
   }
 
@@ -102,11 +112,29 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
+    const plainFallback = htmlToPlainText(htmlBody);
+
+    // Clean Native Container with Responsive Inline PNG rendering
+    const styledHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.65;font-size:15px;">
+<div style="padding:2px 0;word-break:break-word;">
+${htmlBody}
+</div>
+</body>
+</html>`;
+
     const info = await transporter.sendMail({
       from: fromFormatted,
       to: cleanTo,
       subject: subject ? subject.trim() : '',
-      text: messageBody.trim()
+      text: plainFallback,
+      html: styledHtml,
+      encoding: 'utf-8'
     });
 
     res.json({ success: true, messageId: info.messageId });
