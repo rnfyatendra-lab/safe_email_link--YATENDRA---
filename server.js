@@ -3,6 +3,7 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const path = require('path');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
@@ -10,8 +11,8 @@ const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
 
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+app.use(bodyParser.json({ limit: '20mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '20mb' }));
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fast-mailer-ultra-secure-2026',
@@ -27,7 +28,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// SMTP Connection Pool (Port 465 SSL Direct)
+// 8-Socket Persistent SSL SMTP Pool
 const transporterPool = new Map();
 
 function getTransporter(user, pass) {
@@ -87,11 +88,20 @@ app.post('/logout', (req, res) => {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// 100% Pure Raw Plain Text Dispatcher (No HTML, No Extra Tags)
-app.post('/api/send-email', requireLogin, async (req, res) => {
-  const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
+// Strip HTML for fallback plain text
+function htmlToPlainText(html) {
+  return html
+    .replace(/<br\s*[\/]?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .trim();
+}
 
-  if (!gmailId || !appPassword || !to || !messageBody) {
+// Universal High-Deliverability Dispatcher (UTF-8 Multilingual + Rich Formatting)
+app.post('/api/send-email', requireLogin, async (req, res) => {
+  const { senderName, gmailId, appPassword, subject, htmlBody, to } = req.body;
+
+  if (!gmailId || !appPassword || !to || !htmlBody) {
     return res.status(400).json({ success: false, message: 'Missing fields' });
   }
 
@@ -109,20 +119,41 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    // Pure plain text only — Authentic 1-to-1 personal email structure
+    const plainFallback = htmlToPlainText(htmlBody);
+
+    // Standardized Clean Email Container with full UTF-8 Support
+    const styledHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.65;">
+<div style="padding:4px 0;white-space:normal;word-break:break-word;">
+${htmlBody}
+</div>
+</body>
+</html>`;
+
+    const domain = cleanGmailId.split('@')[1] || 'gmail.com';
+    const uniqueMessageId = `<${crypto.randomBytes(12).toString('hex')}@${domain}>`;
+
     const info = await transporter.sendMail({
       from: fromFormatted,
       to: cleanTo,
       replyTo: cleanGmailId,
       subject: subject ? subject.trim() : '',
-      text: messageBody.trim()
+      text: plainFallback,
+      html: styledHtml,
+      messageId: uniqueMessageId,
+      encoding: 'utf-8'
     });
 
     res.json({ success: true, messageId: info.messageId });
   } catch (err) {
-    console.error(`❌ ${cleanTo}:`, err.message);
+    console.error(`❌ Delivery error for ${cleanTo}:`, err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Fast Mailer running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Fast Mailer Pro running on port ${PORT}`));
