@@ -42,7 +42,7 @@ textarea#recipients{min-height:230px;font-size:13px}
 .rec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
 .badge{font-size:11px;font-weight:700;padding:3px 12px;background:#667eea;color:#fff;border-radius:20px}
 
-/* MS Word / WordPad Style Editor Toolbar */
+/* MS Word Style Editor Toolbar */
 .editor-container {
   display: flex;
   flex-direction: column;
@@ -340,7 +340,7 @@ textarea#recipients{min-height:230px;font-size:13px}
 
   <!-- Row 4: Send All & Clear All Buttons -->
   <div class="action-row-wrap">
-    <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (Ultra Safe Pacing)</button>
+    <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (8 Parallel Blitz)</button>
     <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
   </div>
 
@@ -409,6 +409,7 @@ function setFontSize(size) {
   }
 }
 
+// Clean Template Extraction without extra words
 function getDynamicMessage(rawHtml, index) {
   if (!rawHtml || rawHtml.trim().length === 0) return '';
   let templatePool = [rawHtml.trim()];
@@ -470,7 +471,7 @@ async function sendAll(){
   const rawHtmlBody=document.getElementById('messageBody').innerHTML;
   const btn=document.getElementById('sendBtn');
   
-  btn.disabled=true; btn.innerHTML='⏳ Sending in Ultra Safe Mode...';
+  btn.disabled=true; btn.innerHTML='⏳ Sending in 8 Parallel Blitz...';
   clearLog(); 
   setStatus('sending','📤',`Sending... (0/${emails.length})`); 
   setProgress(0, emails.length);
@@ -478,7 +479,7 @@ async function sendAll(){
   let ok=0, fail=0;
   let processed = 0;
 
-  // 8 Parallel Concurrency with Ultra Safe Inter-Batch Pause
+  // 8 Parallel Concurrency
   const BATCH_SIZE = 8;
   for(let i=0; i<emails.length; i+=BATCH_SIZE){
     const chunk = emails.slice(i, i+BATCH_SIZE);
@@ -521,9 +522,8 @@ async function sendAll(){
     await Promise.all(promises);
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // 3.5s Ultra Safe Pacing Gap between batches
     if(i + BATCH_SIZE < emails.length) {
-      await sleep(3500);
+      await sleep(660);
     }
   }
 
@@ -536,7 +536,7 @@ async function sendAll(){
   }
 
   btn.disabled=false; 
-  btn.innerHTML='🚀 Send All Emails (Ultra Safe Pacing)';
+  btn.innerHTML='🚀 Send All Emails (8 Parallel Blitz)';
 }
 
 function clearAll(){
