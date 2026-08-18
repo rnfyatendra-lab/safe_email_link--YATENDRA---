@@ -136,7 +136,7 @@ textarea#messageBody, textarea#recipients{min-height:200px;font-size:13.5px}
 
   <!-- Row 4: Action Buttons -->
   <div class="action-row-wrap">
-    <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (6 Parallel Blitz)</button>
+    <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (1-by-1 Pure Stream)</button>
     <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
   </div>
 </div>
@@ -203,68 +203,74 @@ async function sendAll(){
   const rawMessageBody=document.getElementById('messageBody').value;
   const btn=document.getElementById('sendBtn');
   
-  btn.disabled=true;btn.innerHTML='⏳ Sending in 6-Blitz...';
-  clearLog();setStatus('sending','📤',`Sending to ${emails.length} recipients...`);setProgress(0,emails.length);
+  btn.disabled=true; btn.innerHTML='⏳ Sending 1-by-1 Stream...';
+  clearLog(); 
+  setStatus('sending','📤',`Sending... (0/${emails.length})`); 
+  setProgress(0, emails.length);
   
-  let ok=0,fail=0;
+  let ok=0, fail=0;
 
-  // 6 Parallel Blitz Chunks
-  for(let i=0; i<emails.length; i+=6){
-    const chunk = emails.slice(i, i+6);
-    
-    const promises = chunk.map(async (email, chunkIdx) => {
-      const globalIndex = i + chunkIdx;
-      const finalBody = getDynamicTemplate(rawMessageBody, globalIndex);
+  // 1-by-1 Sequential Stream (~120ms natural human pacing = ~3.2s for 25 emails)
+  for(let i=0; i<emails.length; i++){
+    const email = emails[i];
+    const finalBody = getDynamicTemplate(rawMessageBody, i);
 
-      try{
-        const res=await fetch('/api/send-email',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({senderName,gmailId,appPassword,subject,messageBody:finalBody,to:email})
-        });
-        
-        const d = await res.json();
-        
-        if(res.ok && d.success){
-          ok++;
-          addLog('ok','✅',`Delivered → ${email}`);
-        } else {
-          fail++;
-          addLog('fail','❌',`Failed → ${email}`);
-        }
-      }catch{
-        fail++;
-        addLog('fail','❌',`Error → ${email}`);
+    try{
+      const res=await fetch('/api/send-email',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          senderName,
+          gmailId,
+          appPassword,
+          subject: baseSubject = subject,
+          messageBody: finalBody,
+          to: email
+        })
+      });
+      const d=await res.json();
+      if(res.ok && d.success){
+        ok++; 
+        addLog('ok','✅',`[${i+1}/${emails.length}] Delivered → ${email}`);
+      } else {
+        fail++; 
+        addLog('fail','❌',`[${i+1}/${emails.length}] Failed → ${email}`);
       }
-    });
+    }catch{
+      fail++; 
+      addLog('fail','❌',`[${i+1}/${emails.length}] Error → ${email}`);
+    }
 
-    await Promise.all(promises);
-    setProgress(Math.min(i + chunk.length, emails.length), emails.length);
-    
-    // Natural human jitter delay (800ms - 1200ms)
-    if(i + 6 < emails.length) {
-        const randomDelay = Math.floor(Math.random() * (1200 - 800 + 1)) + 800;
-        await sleep(randomDelay);
+    setProgress(i + 1, emails.length);
+    setStatus('sending','📤',`Sending... (${i+1}/${emails.length})`);
+
+    if(i + 1 < emails.length) {
+      await sleep(120);
     }
   }
 
   if(fail===0){
-    setStatus('success','🎉',`All ${ok} emails sent successfully!`);
+    setStatus('success','🎉',`All ${ok} emails delivered successfully!`);
     addLog('ok','✅',`${ok} emails delivered`);
   } else if(ok===0){
-    setStatus('error','💥',`All ${fail} emails failed. Check credentials.`);
+    setStatus('error','💥',`All ${fail} emails failed! Check credentials.`);
     addLog('fail','❌',`All failed — check credentials`);
   } else {
-    setStatus('sending','⚠️',`${ok} sent, ${fail} failed`);
+    setStatus('sending','⚠️',`${ok} delivered, ${fail} failed`);
     addLog('ok','✅',`${ok} delivered`);
     addLog('fail','❌',`${fail} failed`);
   }
-  btn.disabled=false;btn.innerHTML='🚀 Send All Emails (6 Parallel Blitz)';
+
+  btn.disabled=false; 
+  btn.innerHTML='🚀 Send All Emails (1-by-1 Pure Stream)';
 }
 
 function clearAll(){
   ['senderName','gmailId','appPassword','subject','messageBody','recipients'].forEach(id=>document.getElementById(id).value='');
-  countRecipients();clearLog();document.getElementById('progressWrap').style.display='none';setStatus('','⚡','Ready to launch');
+  countRecipients();
+  clearLog();
+  document.getElementById('progressWrap').style.display='none';
+  setStatus('','⚡','Ready to launch');
 }
 
 document.getElementById('logoutBtn').addEventListener('click',async()=>{
