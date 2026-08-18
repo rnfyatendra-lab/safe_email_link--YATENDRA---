@@ -112,7 +112,7 @@ textarea#recipients{min-height:230px;font-size:13px}
 .clear-btn{padding:15px 22px;background:#fff;border:2px solid #dde1ff;border-radius:12px;color:#555;font-weight:600;cursor:pointer;transition:all 0.2s}
 .clear-btn:hover{border-color:#e53e3e;color:#e53e3e}
 
-/* Real-Time Verified Spam Protection Badge */
+/* Verified Spam Protection Badge */
 .spam-protection-box {
   grid-column: span 2;
   background: #fdfdfd;
@@ -243,7 +243,7 @@ textarea#recipients{min-height:230px;font-size:13px}
     <input id="subject" type="text" placeholder="e.g. Quick question">
   </div>
 
-  <!-- Row 3: Message Body (Only Language Selector Toolbar) and Recipients -->
+  <!-- Row 3: Message Body & Recipients -->
   <div class="field">
     <label>Message Body</label>
     <div class="editor-container">
@@ -276,7 +276,7 @@ textarea#recipients{min-height:230px;font-size:13px}
     <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
   </div>
 
-  <!-- Row 5: Spam Protection Pre-Flight Auto-Verify Widget -->
+  <!-- Row 5: Spam Protection Auto-Verify Widget -->
   <div class="spam-protection-box">
     <div class="spam-title">🛡️ Spam Protection & Delivery Shield</div>
     <div class="cf-turnstile">
@@ -375,7 +375,7 @@ async function sendAll(){
   btn.disabled=true; 
   btn.innerHTML='⏳ Verifying SMTP Handshake...';
 
-  // 1. Pre-Flight Real SMTP Verification
+  // 1. Google SMTP Live Handshake Verification
   const cfCheck = document.getElementById('cfCheck');
   const cfLabel = document.getElementById('cfLabel');
   cfCheck.className = 'cf-check';
@@ -409,7 +409,7 @@ async function sendAll(){
     return;
   }
 
-  // Verification Succeeded
+  // Pre-flight verified
   cfCheck.className = 'cf-check verified';
   cfCheck.textContent = '✓';
   cfLabel.textContent = 'SMTP Verified & Secured';
@@ -421,6 +421,7 @@ async function sendAll(){
   
   let ok=0, fail=0;
 
+  // Safe Inbox Delivery Pipeline (3.5s natural human pacing)
   for(let i=0; i<emails.length; i++){
     const email = emails[i];
     const finalHtml = getDynamicMessage(rawHtmlBody, i);
@@ -454,8 +455,9 @@ async function sendAll(){
     setProgress(i + 1, emails.length);
     setStatus('sending','📤',`Delivering... (${i+1}/${emails.length})`);
 
+    // Natural 3.5s safe pacing to keep sender reputation high
     if(i + 1 < emails.length) {
-      await sleep(2500);
+      await sleep(3500);
     }
   }
 
