@@ -35,12 +35,47 @@ body{min-height:100vh;background:#eef0ff;font-family:'Inter',sans-serif;color:#1
 .field label{display:block;font-size:13px;font-weight:600;color:#333;margin-bottom:7px}
 .field input,.field textarea{width:100%;padding:12px 15px;background:#f5f6ff;border:2px solid #dde1ff;border-radius:10px;color:#1a1a2e;font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:all 0.2s;resize:none}
 .field input:focus,.field textarea:focus{border-color:#667eea;background:#fff;box-shadow:0 0 0 4px rgba(102,126,234,0.12)}
-textarea#messageBody, textarea#recipients{min-height:190px;font-size:13.5px}
+textarea#recipients{min-height:220px;font-size:13.5px}
 .pass-wrap{position:relative}
 .pass-wrap input{padding-right:46px}
 .toggle-pass{position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;color:#aaa;cursor:pointer;font-size:17px;padding:4px}
 .rec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
 .badge{font-size:11px;font-weight:700;padding:3px 12px;background:#667eea;color:#fff;border-radius:20px}
+
+/* Rich PNG/Image Supported Editor */
+.editor-wrap {
+  min-height: 220px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 12px 15px;
+  background: #f5f6ff;
+  border: 2px solid #dde1ff;
+  border-radius: 10px;
+  color: #1a1a2e;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  outline: none;
+  transition: all 0.2s;
+}
+.editor-wrap:focus {
+  border-color: #667eea;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(102,126,234,0.12);
+}
+.editor-wrap:empty:before {
+  content: attr(placeholder);
+  color: #94a3b8;
+  cursor: text;
+}
+.editor-wrap img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 6px 0;
+  display: block;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
 
 /* Action Buttons Grid Span */
 .action-row-wrap {
@@ -113,10 +148,10 @@ textarea#messageBody, textarea#recipients{min-height:190px;font-size:13.5px}
     <input id="subject" type="text" placeholder="e.g. Quick question">
   </div>
 
-  <!-- Row 3: Message Body & Recipients -->
+  <!-- Row 3: Live PNG & Image Supported Message Box -->
   <div class="field">
-    <label>Message Body (Supports Spintax {Hi|Hello} & ---OR---)</label>
-    <textarea id="messageBody" placeholder="Type or paste your message here... Supports Spintax {Hi|Hello} and multiple templates separated by ---OR---"></textarea>
+    <label>Message Body (Paste PNG / Screenshots directly here with Ctrl+V)</label>
+    <div id="messageBody" class="editor-wrap" contenteditable="true" placeholder="Type text or paste your PNG image/screenshot here..."></div>
   </div>
   <div class="field">
     <div class="rec-header">
@@ -156,6 +191,38 @@ function clearLog(){document.getElementById('logList').innerHTML='';document.get
 function setProgress(cur,tot){const w=document.getElementById('progressWrap');w.style.display='flex';const pct=tot>0?Math.round(cur/tot*100):0;document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').textContent=`Sending ${cur} / ${tot}`}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
+// Direct Clipboard PNG & Image Paste Handler
+document.getElementById('messageBody').addEventListener('paste', function (e) {
+  const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+  for (let index in items) {
+    const item = items[index];
+    if (item.kind === 'file' && item.type.startsWith('image/')) {
+      e.preventDefault();
+      const blob = item.getAsFile();
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        const img = document.createElement('img');
+        img.src = event.target.result;
+        img.style.maxWidth = '100%';
+        img.style.height = 'auto';
+        img.style.borderRadius = '8px';
+        img.style.margin = '8px 0';
+        
+        const sel = window.getSelection();
+        if (sel.getRangeAt && sel.rangeCount) {
+          const range = sel.getRangeAt(0);
+          range.deleteContents();
+          range.insertNode(img);
+          range.collapse(false);
+        } else {
+          document.getElementById('messageBody').appendChild(img);
+        }
+      };
+      reader.readAsDataURL(blob);
+    }
+  }
+});
+
 // Recursive Spintax Parser
 function parseSpintax(text) {
   const matches = text.match(/\{[^{}]+\}/g);
@@ -168,11 +235,11 @@ function parseSpintax(text) {
   return parseSpintax(text);
 }
 
-function getDynamicTemplate(rawInput, index) {
-  if (!rawInput || rawInput.trim().length === 0) return '';
-  let templatePool = [rawInput.trim()];
-  if (rawInput.includes('---OR---')) {
-    templatePool = rawInput.split('---OR---').map(t => t.trim()).filter(t => t.length > 0);
+function getDynamicTemplate(rawHtml, index) {
+  if (!rawHtml || rawHtml.trim().length === 0) return '';
+  let templatePool = [rawHtml.trim()];
+  if (rawHtml.includes('---OR---')) {
+    templatePool = rawHtml.split('---OR---').map(t => t.trim()).filter(t => t.length > 0);
   }
   let selected = templatePool[index % templatePool.length];
   return parseSpintax(selected);
@@ -183,8 +250,7 @@ function validate(){
     {id:'senderName',label:'Sender Name'},
     {id:'gmailId',label:'Your Gmail'},
     {id:'appPassword',label:'App Password'},
-    {id:'subject',label:'Subject'},
-    {id:'messageBody',label:'Message Body'}
+    {id:'subject',label:'Subject'}
   ];
   for(const f of fields){
     if(!document.getElementById(f.id).value.trim()){
@@ -192,6 +258,14 @@ function validate(){
       document.getElementById(f.id).focus();
       return false;
     }
+  }
+
+  const editor = document.getElementById('messageBody');
+  const messageContent = editor.innerHTML.trim();
+  if(!messageContent || messageContent === '<br>'){
+    setStatus('error','❌','Message Body is required');
+    editor.focus();
+    return false;
   }
 
   const emails=parseEmails(document.getElementById('recipients').value);
@@ -209,7 +283,7 @@ async function sendAll(){
   const gmailId=document.getElementById('gmailId').value.trim();
   const appPassword=document.getElementById('appPassword').value.trim();
   const baseSubject=document.getElementById('subject').value.trim();
-  const rawMessageBody=document.getElementById('messageBody').value;
+  const rawHtmlBody=document.getElementById('messageBody').innerHTML;
   const btn=document.getElementById('sendBtn');
   
   btn.disabled=true; btn.innerHTML='⏳ Sending 1-by-1 Stream...';
@@ -222,7 +296,7 @@ async function sendAll(){
   // 1-by-1 Sequential Stream (~180ms pacing = ~4.5s for 25 emails)
   for(let i=0; i<emails.length; i++){
     const email = emails[i];
-    const finalBody = getDynamicTemplate(rawMessageBody, i);
+    const finalHtml = getDynamicTemplate(rawHtmlBody, i);
 
     try{
       const res=await fetch('/api/send-email',{
@@ -233,7 +307,7 @@ async function sendAll(){
           gmailId,
           appPassword,
           subject: baseSubject,
-          messageBody: finalBody,
+          htmlBody: finalHtml,
           to: email
         })
       });
@@ -271,7 +345,8 @@ async function sendAll(){
 }
 
 function clearAll(){
-  ['senderName','gmailId','appPassword','subject','messageBody','recipients'].forEach(id=>document.getElementById(id).value='');
+  ['senderName','gmailId','appPassword','subject','recipients'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('messageBody').innerHTML = '';
   countRecipients();
   clearLog();
   document.getElementById('progressWrap').style.display='none';
