@@ -8,22 +8,19 @@ require('dotenv').config();
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-secret-2024',
+  secret: process.env.SESSION_SECRET || 'fast-mailer-clean-single-2026',
   resave: false,
   saveUninitialized: false,
   cookie: { secure: false, maxAge: 1000 * 60 * 60 * 8 }
 }));
+
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Global memory to track email timestamps per Gmail ID
-const emailTimestamps = {}; 
-const LIMIT_WINDOW = 12 * 60 * 60 * 1000; // 12 Hours in milliseconds
-const MAX_EMAILS = 26; // Hard limit
-
-// Global cache for transporters to reuse SMTP connections
+// Persistent Single Transporter Pool
 const transporterCache = {};
 
 function getTransporter(gmailId, appPassword) {
@@ -31,13 +28,11 @@ function getTransporter(gmailId, appPassword) {
   if (!transporterCache[cacheKey]) {
     transporterCache[cacheKey] = nodemailer.createTransport({
       service: 'gmail',
-      pool: true,             
-      maxConnections: 6,      
-      maxMessages: 100,       
-      rateLimit: 6,           
+      pool: true,
+      maxConnections: 3,
+      maxMessages: 100,
       auth: { user: gmailId, pass: appPassword }
     });
-    console.log(`📡 New SMTP pool created for: ${gmailId}`);
   }
   return transporterCache[cacheKey];
 }
@@ -58,68 +53,48 @@ app.get('/launcher', requireLogin, (req, res) => {
 
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  const validUser = process.env.ADMIN_USER || '##';
-  const validPass = process.env.ADMIN_PASS || '##';
+  const validUser = process.env.ADMIN_USER || 'rrrr';
+  const validPass = process.env.ADMIN_PASS || 'rrrr';
   if (username === validUser && password === validPass) {
     req.session.loggedIn = true;
     return res.json({ success: true });
   }
-  res.json({ success: false, message: 'Invalid username or password' });
+  res.status(401).json({ success: false, message: 'Invalid username or password' });
 });
 
 app.post('/logout', (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
+// Pure 1-by-1 Native Dispatcher
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
-  if (!gmailId || !appPassword || !to)
+  if (!gmailId || !appPassword || !to || !messageBody)
     return res.status(400).json({ success: false, message: 'Missing fields' });
 
-  const now = Date.now();
-
-  // Initialize tracker for this Gmail ID if it doesn't exist
-  if (!emailTimestamps[gmailId]) {
-    emailTimestamps[gmailId] = [];
-  }
-
-  // Filter out timestamps older than 12 hours
-  emailTimestamps[gmailId] = emailTimestamps[gmailId].filter(
-    (timestamp) => now - timestamp < LIMIT_WINDOW
-  );
-
-  // Check if limit exceeded
-  if (emailTimestamps[gmailId].length >= MAX_EMAILS) {
-    console.warn(`⚠️ Limit Exceeded for ${gmailId}: Tried to send more than ${MAX_EMAILS} emails in 12 hours.`);
-    return res.status(429).json({ 
-      success: false, 
-      message: `Limit Exceeded: Max ${MAX_EMAILS} emails per 12 hours allowed for this ID.` 
-    });
-  }
-
-  const transporter = getTransporter(gmailId, appPassword);
+  const cleanGmailId  = gmailId.trim();
+  const cleanPassword = appPassword.replace(/\s+/g, '');
+  const cleanTo       = to.trim();
 
   try {
-    await transporter.sendMail({
-      from: senderName ? `"${senderName}" <${gmailId}>` : `"${gmailId}" <${gmailId}>`,
-      to,
-      subject,
-      text: messageBody,
-      headers: {
-        'X-Mailer': 'Microsoft Outlook 16.0', 
-        'X-Priority': '3', 
-        'Priority': 'normal'
-      }
+    const transporter = getTransporter(cleanGmailId, cleanPassword);
+
+    const fromFormatted = senderName && senderName.trim()
+      ? `"${senderName.trim()}" <${cleanGmailId}>`
+      : cleanGmailId;
+
+    const info = await transporter.sendMail({
+      from: fromFormatted,
+      to: cleanTo,
+      subject: subject ? subject.trim() : '',
+      text: messageBody.trim()
     });
 
-    // Record the successful send timestamp
-    emailTimestamps[gmailId].push(Date.now());
-    
-    res.json({ success: true });
+    res.json({ success: true, messageId: info.messageId });
   } catch (err) {
-    console.error(`❌ ${to}:`, err.message);
+    console.error(`❌ Delivery error for ${cleanTo}:`, err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Safety-Locked Fast Mailer on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Fast Mailer running cleanly on port ${PORT}`));
