@@ -37,37 +37,17 @@ function getTransporter(gmailId, appPassword) {
   return transporterCache[cacheKey];
 }
 
-function requireLogin(req, res, next) {
-  if (req.session?.loggedIn) return next();
-  res.redirect('/');
-}
-
+// Direct Routes to prevent "Not Found"
 app.get('/', (req, res) => {
-  if (req.session?.loggedIn) return res.redirect('/launcher');
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
-app.get('/launcher', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'launcher.html'));
 });
 
-app.post('/login', (req, res) => {
-  const { username, password } = req.body;
-  const validUser = process.env.ADMIN_USER || 'rrrr';
-  const validPass = process.env.ADMIN_PASS || 'rrrr';
-  if (username === validUser && password === validPass) {
-    req.session.loggedIn = true;
-    return res.json({ success: true });
-  }
-  res.status(401).json({ success: false, message: 'Invalid username or password' });
-});
-
-app.post('/logout', (req, res) => {
-  req.session.destroy(() => res.json({ success: true }));
+app.get('/launcher', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'launcher.html'));
 });
 
 // Pure 1-by-1 Native Dispatcher
-app.post('/api/send-email', requireLogin, async (req, res) => {
+app.post('/api/send-email', async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
   if (!gmailId || !appPassword || !to || !messageBody)
     return res.status(400).json({ success: false, message: 'Missing fields' });
