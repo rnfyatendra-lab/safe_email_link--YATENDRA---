@@ -28,7 +28,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 8-Socket Persistent SSL SMTP Pool
+// Persistent SSL SMTP Pool
 const transporterPool = new Map();
 
 function getTransporter(user, pass) {
@@ -88,7 +88,6 @@ app.post('/logout', (req, res) => {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Strip HTML for fallback plain text
 function htmlToPlainText(html) {
   return html
     .replace(/<br\s*[\/]?>/gi, '\n')
@@ -97,7 +96,14 @@ function htmlToPlainText(html) {
     .trim();
 }
 
-// Universal High-Deliverability Dispatcher (UTF-8 Multilingual + Rich Formatting)
+// 2-3 Words Safe Footers for Authentic Human Sender Signals
+const safeFooters = [
+  'Sent from Web',
+  'View in Browser',
+  'Sent via Mail',
+  'Direct Web Note'
+];
+
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, htmlBody, to } = req.body;
 
@@ -110,7 +116,8 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanTo       = to.trim();
 
   try {
-    const microDelay = Math.floor(Math.random() * 50) + 170;
+    // Natural human variation pacing (220ms - 290ms)
+    const microDelay = Math.floor(Math.random() * 70) + 220;
     await sleep(microDelay);
 
     const transporter = getTransporter(cleanGmailId, cleanPassword);
@@ -119,18 +126,23 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    const plainFallback = htmlToPlainText(htmlBody);
+    const randomFooter = safeFooters[Math.floor(Math.random() * safeFooters.length)];
 
-    // Standardized Clean Email Container with full UTF-8 Support
+    const plainFallback = `${htmlToPlainText(htmlBody)}\n\n---\n${randomFooter}`;
+
+    // Clean inline styling with subtle 2-3 word footer
     const styledHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.65;">
-<div style="padding:4px 0;white-space:normal;word-break:break-word;">
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.65;font-size:15px;">
+<div style="padding:4px 0;word-break:break-word;">
 ${htmlBody}
+</div>
+<div style="margin-top:22px;padding-top:8px;font-size:11px;color:#94a3b8;border-top:1px solid #f1f5f9;">
+${randomFooter}
 </div>
 </body>
 </html>`;
