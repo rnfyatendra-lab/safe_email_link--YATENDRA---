@@ -28,15 +28,16 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Persistent SSL SMTP Pool
+// Persistent Verified SMTP Socket Pool
 const transporterPool = new Map();
 
-function createVerifiedTransporter(user, pass) {
+function getVerifiedTransporter(user, pass) {
   const cacheKey = `${user}:${pass}`;
   if (transporterPool.has(cacheKey)) {
     return transporterPool.get(cacheKey);
   }
 
+  // Pure Direct SSL Port 465 with Native Google DKIM Signing
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
@@ -87,6 +88,8 @@ app.post('/logout', (req, res) => {
   });
 });
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 function htmlToPlainText(html) {
   return html
     .replace(/<br\s*[\/]?>/gi, '\n')
@@ -95,33 +98,33 @@ function htmlToPlainText(html) {
     .trim();
 }
 
-// 1. Pre-Flight Real SMTP Verification Endpoint
+// 1. Google SMTP Pre-Flight Verification Handshake
 app.post('/api/verify-smtp', requireLogin, async (req, res) => {
   const { gmailId, appPassword } = req.body;
   if (!gmailId || !appPassword) {
-    return res.status(400).json({ success: false, message: 'Gmail ID and App Password are required' });
+    return res.status(400).json({ success: false, message: 'Gmail ID and App Password required' });
   }
 
   const cleanGmailId  = gmailId.trim();
   const cleanPassword = appPassword.replace(/\s+/g, '');
 
   try {
-    const transporter = createVerifiedTransporter(cleanGmailId, cleanPassword);
+    const transporter = getVerifiedTransporter(cleanGmailId, cleanPassword);
     await transporter.verify();
-    res.json({ success: true, message: 'Google SMTP Handshake Verified Successfully' });
+    res.json({ success: true, message: 'Google SMTP Handshake Authenticated' });
   } catch (err) {
     console.error('❌ SMTP Verification Failed:', err.message);
-    res.status(401).json({ success: false, message: 'SMTP Auth Error: ' + err.message });
+    res.status(401).json({ success: false, message: 'SMTP Auth Failed: ' + err.message });
   }
 });
 
-// Fixed Avast Footer Text & HTML
+// Fixed Universal Avast Antivirus Footer
 const avastFooterText = 'Virus-free.www.avast.com';
 const avastFooterHtml = `<div style="margin-top:24px;padding-top:10px;font-size:12px;color:#718096;border-top:1px solid #e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <span style="color:#00b0ff;font-weight:bold;margin-right:4px;">&#10003;</span>Virus-free.<a href="https://www.avast.com" style="color:#718096;text-decoration:none;" target="_blank">www.avast.com</a>
 </div>`;
 
-// 2. Direct Inbox Delivery Dispatcher
+// 2. Pure Inbox RFC Multipart Delivery
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, htmlBody, to } = req.body;
 
@@ -134,7 +137,11 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanTo       = to.trim();
 
   try {
-    const transporter = createVerifiedTransporter(cleanGmailId, cleanPassword);
+    // Human arrival variance micro-delay
+    const microDelay = Math.floor(Math.random() * 200) + 300;
+    await sleep(microDelay);
+
+    const transporter = getVerifiedTransporter(cleanGmailId, cleanPassword);
 
     const fromFormatted = senderName && senderName.trim()
       ? `"${senderName.trim()}" <${cleanGmailId}>`
@@ -142,7 +149,6 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
 
     const plainFallback = `${htmlToPlainText(htmlBody)}\n\n---\n${avastFooterText}`;
 
-    // Clean HTML container with universal Avast security footer
     const styledHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
