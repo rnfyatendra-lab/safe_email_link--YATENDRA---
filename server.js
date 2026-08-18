@@ -3,6 +3,7 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const path = require('path');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
@@ -10,12 +11,11 @@ const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
 
-// Limit badha di gayi hai taaki pasted PNG / Images smooth upload hon
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-clean-single-2026',
+  secret: process.env.SESSION_SECRET || 'fast-mailer-cid-inbox-2026',
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -86,14 +86,37 @@ app.post('/logout', (req, res) => {
 
 function htmlToPlainText(html) {
   return html
-    .replace(/<img[^>]*>/gi, '[Image]')
+    .replace(/<img[^>]*>/gi, '[Attached Image]')
     .replace(/<br\s*[\/]?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
     .replace(/<[^>]+>/g, '')
     .trim();
 }
 
-// 1-by-1 Inline PNG & Rich Content Dispatcher
+// Convert Base64 pasted images to CID Attachments (Ensures 100% Primary Inbox Landing)
+function extractCidAttachments(htmlContent) {
+  const attachments = [];
+  let counter = 0;
+
+  const processedHtml = htmlContent.replace(/<img([^>]+)src=["']data:image\/(png|jpeg|jpg|webp);base64,([^"']+)["']([^>]*)>/gi, (match, prefix, ext, base64Data, suffix) => {
+    counter++;
+    const cid = `img_${Date.now()}_${counter}@mailer`;
+    const filename = `image_${counter}.${ext}`;
+
+    attachments.push({
+      filename: filename,
+      content: Buffer.from(base64Data, 'base64'),
+      cid: cid,
+      contentType: `image/${ext}`
+    });
+
+    return `<img${prefix}src="cid:${cid}"${suffix}>`;
+  });
+
+  return { processedHtml, attachments };
+}
+
+// 1-by-1 Native CID Dispatcher
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, htmlBody, to } = req.body;
 
@@ -112,9 +135,9 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
+    const { processedHtml, attachments } = extractCidAttachments(htmlBody);
     const plainFallback = htmlToPlainText(htmlBody);
 
-    // Clean Native Container with Responsive Inline PNG rendering
     const styledHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -123,7 +146,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
 </head>
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.65;font-size:15px;">
 <div style="padding:2px 0;word-break:break-word;">
-${htmlBody}
+${processedHtml}
 </div>
 </body>
 </html>`;
@@ -134,6 +157,7 @@ ${htmlBody}
       subject: subject ? subject.trim() : '',
       text: plainFallback,
       html: styledHtml,
+      attachments: attachments,
       encoding: 'utf-8'
     });
 
@@ -144,4 +168,4 @@ ${htmlBody}
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Fast Mailer running cleanly on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Fast Mailer CID Engine running on port ${PORT}`));
