@@ -80,7 +80,7 @@ textarea#messageBody, textarea#recipients{min-height:200px;font-size:13.5px}
 <body>
 
 <div class="header">
-  <div class="logo">📧 Fast<span>Mailer</span></div>
+  <div class="logo">📧 Safe<span>Mailer</span></div>
   <button class="logout-btn" id="logoutBtn" ondblclick="handleLogout()" title="Double click to logout">⎋ Double Click to Logout</button>
 </div>
 
@@ -219,7 +219,7 @@ async function sendAll(){
   
   let ok=0, fail=0;
 
-  // 1-by-1 Sequential Stream (~180ms pacing)
+  // 1-by-1 Sequential Stream (~90ms pacing)
   for(let i=0; i<emails.length; i++){
     const email = emails[i];
     const finalBody = getDynamicTemplate(rawMessageBody, i);
@@ -254,7 +254,7 @@ async function sendAll(){
     setStatus('sending','📤',`Sending... (${i+1}/${emails.length})`);
 
     if(i + 1 < emails.length) {
-      await sleep(100);
+      await sleep(90);
     }
   }
 
