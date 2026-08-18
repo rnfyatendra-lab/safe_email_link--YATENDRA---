@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fast Mailer — Smart Inbox Pro</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Georgia&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Georgia&family=Noto+Sans+Devanagari:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{min-height:100vh;background:#eef0ff;font-family:'Inter',sans-serif;color:#1a1a2e;padding:24px}
@@ -42,7 +42,7 @@ textarea#recipients{min-height:230px;font-size:13px}
 .rec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
 .badge{font-size:11px;font-weight:700;padding:3px 12px;background:#667eea;color:#fff;border-radius:20px}
 
-/* MS Word Style Editor Toolbar */
+/* Clean Editor Toolbar: Only Language Dropdown */
 .editor-container {
   display: flex;
   flex-direction: column;
@@ -59,69 +59,27 @@ textarea#recipients{min-height:230px;font-size:13px}
 }
 .toolbar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 5px;
-  padding: 8px 10px;
+  gap: 10px;
+  padding: 8px 12px;
   background: #eaedff;
   border-bottom: 1.5px solid #dde1ff;
 }
-.tool-btn {
-  background: #fff;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 13px;
+.toolbar-label {
+  font-size: 12px;
   font-weight: 700;
-  color: #334155;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  transition: all 0.15s;
-}
-.tool-btn:hover {
-  background: #667eea;
-  color: #fff;
-  border-color: #667eea;
+  color: #475569;
 }
 .tool-select {
   background: #fff;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
-  padding: 3px 6px;
-  font-size: 12px;
+  padding: 4px 10px;
+  font-size: 13px;
   font-weight: 600;
   color: #334155;
   outline: none;
-  height: 28px;
-  cursor: pointer;
-}
-.color-picker-wrap {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: #fff;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  padding: 2px 6px;
-  height: 28px;
-  cursor: pointer;
-}
-.color-picker-wrap input[type="color"] {
-  border: none;
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  background: none;
-  padding: 0;
-}
-.color-picker-wrap label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #334155;
+  height: 30px;
   cursor: pointer;
 }
 .rich-editor {
@@ -285,48 +243,22 @@ textarea#recipients{min-height:230px;font-size:13px}
     <input id="subject" type="text" placeholder="e.g. Quick question">
   </div>
 
-  <!-- Row 3: Rich MS Word Formattable Message Body and Recipients -->
+  <!-- Row 3: Message Body (Only Language Selector Toolbar) and Recipients -->
   <div class="field">
-    <label>Message Body (Highlight Colors & WordPad Formatting)</label>
+    <label>Message Body</label>
     <div class="editor-container">
       <div class="toolbar">
-        <select class="tool-select" id="fontFamily" onchange="formatDoc('fontName', this.value)" title="Change Font Style">
-          <option value="'Georgia', serif" selected>Georgia</option>
-          <option value="Inter, sans-serif">Standard (Inter)</option>
-          <option value="'Roboto', sans-serif">Roboto</option>
-          <option value="Arial, Helvetica, sans-serif">Arial</option>
+        <span class="toolbar-label">🌐 Language / Script:</span>
+        <select class="tool-select" id="fontFamily" onchange="changeLanguageFont(this.value)" title="Select Language Style">
+          <option value="'Georgia', serif" selected>English (Georgia Standard)</option>
+          <option value="'Noto Sans Devanagari', 'Roboto', sans-serif">Hindi / Devanagari (हिंदी)</option>
+          <option value="Inter, sans-serif">Modern Sans (Inter)</option>
+          <option value="Arial, Helvetica, sans-serif">Clean Arial</option>
+          <option value="'Courier New', monospace">Plain Monospace</option>
         </select>
-
-        <select class="tool-select" id="fontSize" onchange="setFontSize(this.value)" title="Letter Size">
-          <option value="13.5px">11 pt</option>
-          <option value="15px" selected>12 pt (Normal)</option>
-          <option value="17.5px">14 pt</option>
-          <option value="20px">16 pt</option>
-        </select>
-
-        <button type="button" class="tool-btn" onclick="formatDoc('bold')" title="Bold"><b>B</b></button>
-        <button type="button" class="tool-btn" onclick="formatDoc('italic')" title="Italic"><i>I</i></button>
-        <button type="button" class="tool-btn" onclick="formatDoc('underline')" title="Underline"><u>U</u></button>
-
-        <select class="tool-select" id="highlightColor" onchange="applyHighlight(this.value)" title="Text Highlight Color (Like Word)">
-          <option value="" disabled selected>🖍️ Highlight</option>
-          <option value="#ffff00" style="background:#ffff00;color:#000;">Yellow</option>
-          <option value="#a6ff00" style="background:#a6ff00;color:#000;">Bright Green</option>
-          <option value="#00ffff" style="background:#00ffff;color:#000;">Cyan</option>
-          <option value="#ff66cc" style="background:#ff66cc;color:#000;">Pink</option>
-          <option value="#ffa500" style="background:#ffa500;color:#000;">Orange</option>
-          <option value="transparent">No Color</option>
-        </select>
-
-        <div class="color-picker-wrap" title="Font Text Color">
-          <label for="textColor">A</label>
-          <input type="color" id="textColor" value="#1a1a2e" onchange="formatDoc('foreColor', this.value)">
-        </div>
-
-        <button type="button" class="tool-btn" onclick="formatDoc('removeFormat')" title="Clear Format" style="font-size:11px;font-weight:600;padding:4px 7px;">✕ Clear</button>
       </div>
 
-      <div id="messageBody" class="rich-editor" contenteditable="true" placeholder="Type or paste your message here... Select any line to highlight in yellow or change color. Multiple templates supported with ---OR---"></div>
+      <div id="messageBody" class="rich-editor" contenteditable="true" placeholder="Type or paste your message template here... Supports multiple templates separated by ---OR---"></div>
     </div>
   </div>
 
@@ -383,30 +315,11 @@ function clearLog(){document.getElementById('logList').innerHTML='';document.get
 function setProgress(cur,tot){const w=document.getElementById('progressWrap');w.style.display='flex';const pct=tot>0?Math.round(cur/tot*100):0;document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').textContent=`Sending ${cur} / ${tot}`}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
-function formatDoc(cmd, val = null) {
-  document.execCommand(cmd, false, val);
-  document.getElementById('messageBody').focus();
-}
-
-function applyHighlight(color) {
-  if (!color) return;
-  document.execCommand('hiliteColor', false, color);
-  document.getElementById('messageBody').focus();
-}
-
-function setFontSize(size) {
-  const sel = window.getSelection();
-  if (sel.rangeCount) {
-    const range = sel.getRangeAt(0);
-    if (!range.collapsed) {
-      const span = document.createElement('span');
-      span.style.fontSize = size;
-      span.appendChild(range.extractContents());
-      range.insertNode(span);
-    } else {
-      document.getElementById('messageBody').style.fontSize = size;
-    }
-  }
+function changeLanguageFont(font) {
+  const editor = document.getElementById('messageBody');
+  editor.style.fontFamily = font;
+  document.execCommand('fontName', false, font);
+  editor.focus();
 }
 
 function getDynamicMessage(rawHtml, index) {
@@ -462,7 +375,7 @@ async function sendAll(){
   btn.disabled=true; 
   btn.innerHTML='⏳ Verifying SMTP Handshake...';
 
-  // 1. Real Pre-Flight Verification Handshake with Google SMTP
+  // 1. Pre-Flight Real SMTP Verification
   const cfCheck = document.getElementById('cfCheck');
   const cfLabel = document.getElementById('cfLabel');
   cfCheck.className = 'cf-check';
@@ -508,7 +421,6 @@ async function sendAll(){
   
   let ok=0, fail=0;
 
-  // Safe Natural Sending Pipeline (Prevents Google's Bot/Spam Heuristic Block)
   for(let i=0; i<emails.length; i++){
     const email = emails[i];
     const finalHtml = getDynamicMessage(rawHtmlBody, i);
@@ -542,7 +454,6 @@ async function sendAll(){
     setProgress(i + 1, emails.length);
     setStatus('sending','📤',`Delivering... (${i+1}/${emails.length})`);
 
-    // Natural 2.5s safe pacing between emails to ensure Google logs genuine traffic
     if(i + 1 < emails.length) {
       await sleep(2500);
     }
