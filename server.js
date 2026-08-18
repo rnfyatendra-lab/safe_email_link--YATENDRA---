@@ -14,7 +14,7 @@ app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-clean-2026',
+  secret: process.env.SESSION_SECRET || 'fast-mailer-clean-inbox-2026',
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -27,7 +27,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Clean SMTP Connection Pool
+// Persistent Clean SMTP Connection Pool
 const transporterPool = new Map();
 
 function getTransporter(user, pass) {
@@ -40,7 +40,7 @@ function getTransporter(user, pass) {
     service: 'gmail',
     pool: true,
     maxConnections: 8,
-    maxMessages: 200,
+    maxMessages: 100,
     auth: { user, pass }
   });
 
@@ -83,12 +83,14 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// Pure Natural Delivery (Google Signs Native DKIM/SPF)
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// 100% Clean Dispatcher (Pure Text Only, Native Google DKIM Signing)
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
   if (!gmailId || !appPassword || !to || !messageBody) {
-    return res.status(400).json({ success: false, message: 'Missing required fields' });
+    return res.status(400).json({ success: false, message: 'Missing fields' });
   }
 
   const cleanGmailId  = gmailId.trim();
@@ -96,13 +98,17 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanTo       = to.trim();
 
   try {
+    // Micro-delay between parallel dispatches to prevent socket bursting
+    const microDelay = Math.floor(Math.random() * 80) + 120;
+    await sleep(microDelay);
+
     const transporter = getTransporter(cleanGmailId, cleanPassword);
 
     const fromFormatted = senderName && senderName.trim()
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    // Pure Clean Message: No fake footers, no link injections, authentic Google headers
+    // Pure Clean Mail (No HTML, No Tracking, No Extra Footers)
     const info = await transporter.sendMail({
       from: fromFormatted,
       to: cleanTo,
@@ -112,9 +118,9 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
 
     res.json({ success: true, messageId: info.messageId });
   } catch (err) {
-    console.error(`❌ Delivery error for ${cleanTo}:`, err.message);
+    console.error(`❌ Delivery Error for ${cleanTo}:`, err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Fast Mailer running cleanly on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Fast Mailer Ultra-Clean running on port ${PORT}`));
