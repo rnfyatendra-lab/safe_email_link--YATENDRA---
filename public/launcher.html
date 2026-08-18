@@ -33,9 +33,9 @@ body{min-height:100vh;background:#eef0ff;font-family:'Inter',sans-serif;color:#1
 }
 .field{margin-bottom:5px}
 .field label{display:block;font-size:13px;font-weight:600;color:#333;margin-bottom:7px}
-.field input,.field textarea{width:100%;padding:12px 15px;background:#f5f6ff;border:2px solid #dde1ff;border-radius:10px;color:#1a1a2e;font-family:'Inter',sans-serif;font-size:14.5px;outline:none;transition:all 0.2s;resize:none}
+.field input,.field textarea{width:100%;padding:12px 15px;background:#f5f6ff;border:2px solid #dde1ff;border-radius:10px;color:#1a1a2e;font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:all 0.2s;resize:none}
 .field input:focus,.field textarea:focus{border-color:#667eea;background:#fff;box-shadow:0 0 0 4px rgba(102,126,234,0.12)}
-textarea#messageBody, textarea#recipients{min-height:180px;font-size:14px}
+textarea#messageBody, textarea#recipients{min-height:180px;font-size:13px}
 .pass-wrap{position:relative}
 .pass-wrap input{padding-right:46px}
 .toggle-pass{position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;color:#aaa;cursor:pointer;font-size:17px;padding:4px}
@@ -186,10 +186,10 @@ textarea#messageBody, textarea#recipients{min-height:180px;font-size:14px}
     <input id="subject" type="text" placeholder="e.g. Quick question">
   </div>
 
-  <!-- Row 3: Message Body and Recipients -->
+  <!-- Row 3: Message Body (Clean Text) and Recipients -->
   <div class="field">
     <label>Message Body</label>
-    <textarea id="messageBody" placeholder="Write or paste your custom email content/template here... (Supports multiple templates using ---OR---)"></textarea>
+    <textarea id="messageBody" placeholder="Write or paste your simple message template here... (Multiple templates supported using ---OR---)"></textarea>
   </div>
   <div class="field">
     <div class="rec-header">
@@ -205,7 +205,7 @@ textarea#messageBody, textarea#recipients{min-height:180px;font-size:14px}
     <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
   </div>
 
-  <!-- Row 5: Spam Protection Pre-Flight Auto-Verify Widget -->
+  <!-- Row 5: Spam Protection Auto-Verify Widget -->
   <div class="spam-protection-box">
     <div class="spam-title">🛡️ Spam Protection & Delivery Shield</div>
     <div class="cf-turnstile">
@@ -244,21 +244,14 @@ function clearLog(){document.getElementById('logList').innerHTML='';document.get
 function setProgress(cur,tot){const w=document.getElementById('progressWrap');w.style.display='flex';const pct=tot>0?Math.round(cur/tot*100):0;document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').textContent=`Sending ${cur} / ${tot}`}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
-// Dynamic Template Formatter & Zero-Width Hash Variator
-function getDynamicMessage(rawInput, index) {
+// Pure Plain Text Template Selector (No invisible characters, completely clean)
+function getCleanMessage(rawInput, index) {
   if (!rawInput || rawInput.trim().length === 0) return '';
-  
   let templatePool = [rawInput.trim()];
   if (rawInput.includes('---OR---')) {
     templatePool = rawInput.split('---OR---').map(t => t.trim()).filter(t => t.length > 0);
   }
-  
-  let selected = templatePool[index % templatePool.length];
-  
-  // Inject micro zero-width tokens to ensure unique byte footprint per email
-  const zeroWidths = ['\u200B', '\u200C', '\u200D', '\uFEFF'];
-  const words = selected.split(' ');
-  return words.map((w, idx) => (idx % 3 === 0 ? w + zeroWidths[Math.floor(Math.random() * zeroWidths.length)] : w)).join(' ');
+  return templatePool[index % templatePool.length];
 }
 
 function validate(){
@@ -293,7 +286,7 @@ async function sendAll(){
   cfCheck.textContent = '⏳';
   cfLabel.textContent = 'Verifying Safe Tokens...';
   
-  await sleep(440); // Pre-flight verification check
+  await sleep(440);
   cfCheck.className = 'cf-check verified';
   cfCheck.textContent = '✓';
   cfLabel.textContent = 'Success! Authenticated';
@@ -313,14 +306,14 @@ async function sendAll(){
   let ok=0, fail=0;
   let processed = 0;
 
-  // 8 Parallel Concurrency Loop with 10% Relaxed Delay
+  // 8 Parallel Concurrency Loop
   const BATCH_SIZE = 8;
   for(let i=0; i<emails.length; i+=BATCH_SIZE){
     const chunk = emails.slice(i, i+BATCH_SIZE);
     
     const promises = chunk.map(async (email, chunkIdx) => {
       const globalIndex = i + chunkIdx;
-      const finalBody = getDynamicMessage(rawMessageBody, globalIndex);
+      const cleanBody = getCleanMessage(rawMessageBody, globalIndex);
 
       try{
         const res=await fetch('/api/send-email',{
@@ -331,7 +324,7 @@ async function sendAll(){
             gmailId,
             appPassword,
             subject: baseSubject,
-            messageBody: finalBody,
+            messageBody: cleanBody,
             to: email
           })
         });
