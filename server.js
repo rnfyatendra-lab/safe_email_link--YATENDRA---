@@ -3,7 +3,6 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const path = require('path');
-const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
@@ -11,11 +10,12 @@ const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
 
+// Limit 50MB for HD Images/PNG
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-cid-inbox-2026',
+  secret: process.env.SESSION_SECRET || 'fast-mailer-perfect-img-2026',
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -28,7 +28,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Persistent Single Transporter Pool
+// Persistent Clean Single Transporter Pool
 const transporterPool = new Map();
 
 function getTransporter(user, pass) {
@@ -86,37 +86,38 @@ app.post('/logout', (req, res) => {
 
 function htmlToPlainText(html) {
   return html
-    .replace(/<img[^>]*>/gi, '[Attached Image]')
+    .replace(/<img[^>]*>/gi, '')
     .replace(/<br\s*[\/]?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
     .replace(/<[^>]+>/g, '')
     .trim();
 }
 
-// Convert Base64 pasted images to CID Attachments (Ensures 100% Primary Inbox Landing)
-function extractCidAttachments(htmlContent) {
+// Perfect CID Inline Image Parser (Gmail Native Support)
+function processInlineImages(htmlContent) {
   const attachments = [];
-  let counter = 0;
+  let imgIndex = 0;
 
-  const processedHtml = htmlContent.replace(/<img([^>]+)src=["']data:image\/(png|jpeg|jpg|webp);base64,([^"']+)["']([^>]*)>/gi, (match, prefix, ext, base64Data, suffix) => {
-    counter++;
-    const cid = `img_${Date.now()}_${counter}@mailer`;
-    const filename = `image_${counter}.${ext}`;
+  const processedHtml = htmlContent.replace(/<img([^>]+)src=["']data:image\/(png|jpeg|jpg|webp|gif);base64,([^"']+)["']([^>]*)>/gi, (fullMatch, prefix, format, base64Data, suffix) => {
+    imgIndex++;
+    const cidName = `inline_photo_${Date.now()}_${imgIndex}`;
+    const filename = `photo_${imgIndex}.${format}`;
 
     attachments.push({
       filename: filename,
       content: Buffer.from(base64Data, 'base64'),
-      cid: cid,
-      contentType: `image/${ext}`
+      cid: cidName,
+      contentType: `image/${format}`,
+      contentDisposition: 'inline'
     });
 
-    return `<img${prefix}src="cid:${cid}"${suffix}>`;
+    return `<img${prefix}src="cid:${cidName}"${suffix} style="max-width:100%;height:auto;display:block;border-radius:6px;margin:8px 0;">`;
   });
 
   return { processedHtml, attachments };
 }
 
-// 1-by-1 Native CID Dispatcher
+// 1-by-1 Native Dispatcher
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, htmlBody, to } = req.body;
 
@@ -135,7 +136,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    const { processedHtml, attachments } = extractCidAttachments(htmlBody);
+    const { processedHtml, attachments } = processInlineImages(htmlBody);
     const plainFallback = htmlToPlainText(htmlBody);
 
     const styledHtml = `<!DOCTYPE html>
@@ -145,7 +146,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.65;font-size:15px;">
-<div style="padding:2px 0;word-break:break-word;">
+<div style="padding:4px 0;word-break:break-word;">
 ${processedHtml}
 </div>
 </body>
@@ -168,4 +169,4 @@ ${processedHtml}
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Fast Mailer CID Engine running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Fast Mailer running cleanly on port ${PORT}`));
