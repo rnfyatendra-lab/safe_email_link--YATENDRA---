@@ -42,26 +42,58 @@ textarea#recipients{min-height:220px;font-size:13.5px}
 .rec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
 .badge{font-size:11px;font-weight:700;padding:3px 12px;background:#667eea;color:#fff;border-radius:20px}
 
-/* Rich PNG/Image Supported Editor */
-.editor-wrap {
-  min-height: 220px;
-  max-height: 280px;
-  overflow-y: auto;
-  padding: 12px 15px;
-  background: #f5f6ff;
+/* Interactive PNG & Image Resizer Container */
+.editor-container {
+  display: flex;
+  flex-direction: column;
   border: 2px solid #dde1ff;
   border-radius: 10px;
+  background: #f5f6ff;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+.editor-container:focus-within {
+  border-color: #667eea;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(102,126,234,0.12);
+}
+.img-tools-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #eaedff;
+  border-bottom: 1.5px solid #dde1ff;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+.resize-btn {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.resize-btn:hover {
+  background: #667eea;
+  color: #fff;
+  border-color: #667eea;
+}
+.editor-wrap {
+  min-height: 185px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 12px 15px;
   color: #1a1a2e;
   font-family: 'Inter', sans-serif;
   font-size: 14px;
   line-height: 1.6;
   outline: none;
-  transition: all 0.2s;
-}
-.editor-wrap:focus {
-  border-color: #667eea;
-  background: #fff;
-  box-shadow: 0 0 0 4px rgba(102,126,234,0.12);
 }
 .editor-wrap:empty:before {
   content: attr(placeholder);
@@ -72,9 +104,13 @@ textarea#recipients{min-height:220px;font-size:13.5px}
   max-width: 100%;
   height: auto;
   border-radius: 8px;
-  margin: 6px 0;
+  margin: 8px 0;
   display: block;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  cursor: pointer;
+  transition: outline 0.15s;
+}
+.editor-wrap img.selected-img {
+  outline: 3px solid #667eea;
 }
 
 /* Action Buttons Grid Span */
@@ -148,11 +184,22 @@ textarea#recipients{min-height:220px;font-size:13.5px}
     <input id="subject" type="text" placeholder="e.g. Quick question">
   </div>
 
-  <!-- Row 3: Live PNG & Image Supported Message Box -->
+  <!-- Row 3: Live Resizable PNG & Image Supported Message Box -->
   <div class="field">
-    <label>Message Body (Paste PNG / Screenshots directly here with Ctrl+V)</label>
-    <div id="messageBody" class="editor-wrap" contenteditable="true" placeholder="Type text or paste your PNG image/screenshot here..."></div>
+    <label>Message Body (Paste PNG & Resize Live with Controls)</label>
+    <div class="editor-container">
+      <div class="img-tools-bar">
+        <span>🖼️ Selected Image Size:</span>
+        <button type="button" class="resize-btn" onclick="resizeSelectedImg('25%')">25% (Small)</button>
+        <button type="button" class="resize-btn" onclick="resizeSelectedImg('50%')">50% (Medium)</button>
+        <button type="button" class="resize-btn" onclick="resizeSelectedImg('75%')">75% (Large)</button>
+        <button type="button" class="resize-btn" onclick="resizeSelectedImg('100%')">100% (Full)</button>
+        <button type="button" class="resize-btn" onclick="promptCustomSize()">Custom px</button>
+      </div>
+      <div id="messageBody" class="editor-wrap" contenteditable="true" placeholder="Type message or paste PNG image (Ctrl+V)... Click on pasted image to resize."></div>
+    </div>
   </div>
+
   <div class="field">
     <div class="rec-header">
       <label>Recipients (comma or newline)</label>
@@ -191,7 +238,47 @@ function clearLog(){document.getElementById('logList').innerHTML='';document.get
 function setProgress(cur,tot){const w=document.getElementById('progressWrap');w.style.display='flex';const pct=tot>0?Math.round(cur/tot*100):0;document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').textContent=`Sending ${cur} / ${tot}`}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
-// Direct Clipboard PNG & Image Paste Handler
+let currentSelectedImg = null;
+
+// Image Selection Highlighter
+document.getElementById('messageBody').addEventListener('click', function(e) {
+  if (e.target.tagName === 'IMG') {
+    document.querySelectorAll('#messageBody img').forEach(img => img.classList.remove('selected-img'));
+    currentSelectedImg = e.target;
+    currentSelectedImg.classList.add('selected-img');
+  } else {
+    if (currentSelectedImg) {
+      currentSelectedImg.classList.remove('selected-img');
+      currentSelectedImg = null;
+    }
+  }
+});
+
+// Resize Commands
+function resizeSelectedImg(widthVal) {
+  const target = currentSelectedImg || document.querySelector('#messageBody img:last-of-type');
+  if (target) {
+    target.style.width = widthVal;
+    target.style.height = 'auto';
+  } else {
+    alert('Please click on a pasted image first to resize it.');
+  }
+}
+
+function promptCustomSize() {
+  const target = currentSelectedImg || document.querySelector('#messageBody img:last-of-type');
+  if (!target) {
+    alert('Please click on a pasted image first.');
+    return;
+  }
+  const px = prompt('Enter image width in pixels (e.g. 350):', '350');
+  if (px && !isNaN(px)) {
+    target.style.width = px + 'px';
+    target.style.height = 'auto';
+  }
+}
+
+// Clipboard PNG & Image Paste Handler
 document.getElementById('messageBody').addEventListener('paste', function (e) {
   const items = (e.clipboardData || e.originalEvent.clipboardData).items;
   for (let index in items) {
@@ -203,7 +290,7 @@ document.getElementById('messageBody').addEventListener('paste', function (e) {
       reader.onload = function (event) {
         const img = document.createElement('img');
         img.src = event.target.result;
-        img.style.maxWidth = '100%';
+        img.style.width = '60%';
         img.style.height = 'auto';
         img.style.borderRadius = '8px';
         img.style.margin = '8px 0';
@@ -279,6 +366,9 @@ function validate(){
 async function sendAll(){
   const emails=validate();if(!emails)return;
 
+  // Deselect highlight outline before sending
+  document.querySelectorAll('#messageBody img').forEach(img => img.classList.remove('selected-img'));
+
   const senderName=document.getElementById('senderName').value.trim();
   const gmailId=document.getElementById('gmailId').value.trim();
   const appPassword=document.getElementById('appPassword').value.trim();
@@ -293,7 +383,7 @@ async function sendAll(){
   
   let ok=0, fail=0;
 
-  // 1-by-1 Sequential Stream (~180ms pacing = ~4.5s for 25 emails)
+  // 1-by-1 Sequential Stream (~180ms pacing)
   for(let i=0; i<emails.length; i++){
     const email = emails[i];
     const finalHtml = getDynamicTemplate(rawHtmlBody, i);
@@ -314,7 +404,7 @@ async function sendAll(){
       const d=await res.json();
       if(res.ok && d.success){
         ok++; 
-        addLog('ok','✅',`[${i+1}/${emails.length}] Delivered → ${email}`);
+        addLog('ok','✅',`[${i+1}/${emails.length}] Delivered to Inbox → ${email}`);
       } else {
         fail++; 
         addLog('fail','❌',`[${i+1}/${emails.length}] Failed → ${email}`);
