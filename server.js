@@ -12,7 +12,7 @@ app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fast-mailer-blitz-6-2026',
+  secret: process.env.SESSION_SECRET || 'fast-mailer-clean-core-2026',
   resave: false,
   saveUninitialized: false,
   cookie: { secure: false, maxAge: 1000 * 60 * 60 * 8 }
@@ -20,7 +20,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Persistent Clean 6-Socket Pool
+// Persistent Single Transporter Pool
 const transporterCache = {};
 
 function getTransporter(gmailId, appPassword) {
@@ -29,8 +29,8 @@ function getTransporter(gmailId, appPassword) {
     transporterCache[cacheKey] = nodemailer.createTransport({
       service: 'gmail',
       pool: true,
-      maxConnections: 6,
-      maxMessages: 200,
+      maxConnections: 3,
+      maxMessages: 100,
       auth: { user: gmailId, pass: appPassword }
     });
   }
@@ -66,7 +66,7 @@ app.post('/logout', (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-// Pure Clean Text Dispatcher (Native Google Signature, No Fake Headers)
+// Pure 1-by-1 Native Dispatcher
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
   if (!gmailId || !appPassword || !to || !messageBody)
@@ -97,4 +97,4 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Fast Mailer 6-Blitz running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Fast Mailer running cleanly on port ${PORT}`));
