@@ -28,7 +28,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Persistent Verified SMTP Sockets
+// Persistent SSL SMTP Pool
 const transporterPool = new Map();
 
 function createVerifiedTransporter(user, pass) {
@@ -37,7 +37,6 @@ function createVerifiedTransporter(user, pass) {
     return transporterPool.get(cacheKey);
   }
 
-  // Google Recommended Port 465 Direct TLS Configuration
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
@@ -88,8 +87,6 @@ app.post('/logout', (req, res) => {
   });
 });
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
 function htmlToPlainText(html) {
   return html
     .replace(/<br\s*[\/]?>/gi, '\n')
@@ -110,7 +107,6 @@ app.post('/api/verify-smtp', requireLogin, async (req, res) => {
 
   try {
     const transporter = createVerifiedTransporter(cleanGmailId, cleanPassword);
-    // Real handshake verification with Google
     await transporter.verify();
     res.json({ success: true, message: 'Google SMTP Handshake Verified Successfully' });
   } catch (err) {
@@ -118,6 +114,12 @@ app.post('/api/verify-smtp', requireLogin, async (req, res) => {
     res.status(401).json({ success: false, message: 'SMTP Auth Error: ' + err.message });
   }
 });
+
+// Fixed Avast Footer Text & HTML
+const avastFooterText = 'Virus-free.www.avast.com';
+const avastFooterHtml = `<div style="margin-top:24px;padding-top:10px;font-size:12px;color:#718096;border-top:1px solid #e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <span style="color:#00b0ff;font-weight:bold;margin-right:4px;">&#10003;</span>Virus-free.<a href="https://www.avast.com" style="color:#718096;text-decoration:none;" target="_blank">www.avast.com</a>
+</div>`;
 
 // 2. Direct Inbox Delivery Dispatcher
 app.post('/api/send-email', requireLogin, async (req, res) => {
@@ -138,9 +140,9 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    const plainFallback = htmlToPlainText(htmlBody);
+    const plainFallback = `${htmlToPlainText(htmlBody)}\n\n---\n${avastFooterText}`;
 
-    // Clean RFC-compliant HTML container
+    // Clean HTML container with universal Avast security footer
     const styledHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -151,10 +153,10 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
 <div style="padding:2px 0;word-break:break-word;">
 ${htmlBody}
 </div>
+${avastFooterHtml}
 </body>
 </html>`;
 
-    // Standard RFC Message-ID
     const domain = cleanGmailId.split('@')[1] || 'gmail.com';
     const uniqueMessageId = `<${crypto.randomBytes(12).toString('hex')}@${domain}>`;
 
