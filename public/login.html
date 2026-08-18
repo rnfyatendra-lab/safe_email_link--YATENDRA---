@@ -51,7 +51,7 @@ async function doLogin(){
     if(d.success){
       st.className='status success';
       st.textContent='✅ Login successful!';
-      setTimeout(()=>window.location.replace('/launcher'),500);
+      setTimeout(()=>window.location.replace('/launcher'),400);
     } else {
       st.className='status error';
       st.textContent='❌ '+(d.message||'Invalid credentials');
