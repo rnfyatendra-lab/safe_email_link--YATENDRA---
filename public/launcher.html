@@ -290,7 +290,6 @@ textarea#recipients{min-height:230px;font-size:13px}
     <label>Message Body (Highlight Colors & WordPad Formatting)</label>
     <div class="editor-container">
       <div class="toolbar">
-        <!-- Font Dropdown -->
         <select class="tool-select" id="fontFamily" onchange="formatDoc('fontName', this.value)" title="Change Font Style">
           <option value="'Georgia', serif" selected>Georgia</option>
           <option value="Inter, sans-serif">Standard (Inter)</option>
@@ -298,7 +297,6 @@ textarea#recipients{min-height:230px;font-size:13px}
           <option value="Arial, Helvetica, sans-serif">Arial</option>
         </select>
 
-        <!-- Font Size Selector -->
         <select class="tool-select" id="fontSize" onchange="setFontSize(this.value)" title="Letter Size">
           <option value="13.5px">11 pt</option>
           <option value="15px" selected>12 pt (Normal)</option>
@@ -306,12 +304,10 @@ textarea#recipients{min-height:230px;font-size:13px}
           <option value="20px">16 pt</option>
         </select>
 
-        <!-- Basic Styles -->
         <button type="button" class="tool-btn" onclick="formatDoc('bold')" title="Bold"><b>B</b></button>
         <button type="button" class="tool-btn" onclick="formatDoc('italic')" title="Italic"><i>I</i></button>
         <button type="button" class="tool-btn" onclick="formatDoc('underline')" title="Underline"><u>U</u></button>
 
-        <!-- MS Word Highlight Color Dropdown -->
         <select class="tool-select" id="highlightColor" onchange="applyHighlight(this.value)" title="Text Highlight Color (Like Word)">
           <option value="" disabled selected>🖍️ Highlight</option>
           <option value="#ffff00" style="background:#ffff00;color:#000;">Yellow</option>
@@ -322,17 +318,14 @@ textarea#recipients{min-height:230px;font-size:13px}
           <option value="transparent">No Color</option>
         </select>
 
-        <!-- Font Color Picker -->
         <div class="color-picker-wrap" title="Font Text Color">
           <label for="textColor">A</label>
           <input type="color" id="textColor" value="#1a1a2e" onchange="formatDoc('foreColor', this.value)">
         </div>
 
-        <!-- Clear Format -->
         <button type="button" class="tool-btn" onclick="formatDoc('removeFormat')" title="Clear Format" style="font-size:11px;font-weight:600;padding:4px 7px;">✕ Clear</button>
       </div>
 
-      <!-- Editable Content Area -->
       <div id="messageBody" class="rich-editor" contenteditable="true" placeholder="Type or paste your message here... Select any line to highlight in yellow or change color. Multiple templates supported with ---OR---"></div>
     </div>
   </div>
@@ -347,7 +340,7 @@ textarea#recipients{min-height:230px;font-size:13px}
 
   <!-- Row 4: Send All & Clear All Buttons -->
   <div class="action-row-wrap">
-    <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (Safe High-Delivery Mode)</button>
+    <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (Ultra Safe Pacing)</button>
     <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
   </div>
 
@@ -477,7 +470,7 @@ async function sendAll(){
   const rawHtmlBody=document.getElementById('messageBody').innerHTML;
   const btn=document.getElementById('sendBtn');
   
-  btn.disabled=true; btn.innerHTML='⏳ Sending in Safe Mode...';
+  btn.disabled=true; btn.innerHTML='⏳ Sending in Ultra Safe Mode...';
   clearLog(); 
   setStatus('sending','📤',`Sending... (0/${emails.length})`); 
   setProgress(0, emails.length);
@@ -485,7 +478,7 @@ async function sendAll(){
   let ok=0, fail=0;
   let processed = 0;
 
-  // 8 Parallel Concurrency with Slower Relaxed Delay
+  // 8 Parallel Concurrency with Ultra Safe Inter-Batch Pause
   const BATCH_SIZE = 8;
   for(let i=0; i<emails.length; i+=BATCH_SIZE){
     const chunk = emails.slice(i, i+BATCH_SIZE);
@@ -528,9 +521,9 @@ async function sendAll(){
     await Promise.all(promises);
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
-    // Slower pacing between batches (1800ms)
+    // 3.5s Ultra Safe Pacing Gap between batches
     if(i + BATCH_SIZE < emails.length) {
-      await sleep(1800);
+      await sleep(3500);
     }
   }
 
@@ -543,7 +536,7 @@ async function sendAll(){
   }
 
   btn.disabled=false; 
-  btn.innerHTML='🚀 Send All Emails (Safe High-Delivery Mode)';
+  btn.innerHTML='🚀 Send All Emails (Ultra Safe Pacing)';
 }
 
 function clearAll(){
