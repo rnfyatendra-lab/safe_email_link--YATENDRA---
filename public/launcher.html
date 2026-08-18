@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fast Mailer — Smart Inbox Pro</title>
+<title>Fast Mailer — Direct Inbox</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -35,7 +35,7 @@ body{min-height:100vh;background:#eef0ff;font-family:'Inter',sans-serif;color:#1
 .field label{display:block;font-size:13px;font-weight:600;color:#333;margin-bottom:7px}
 .field input,.field textarea{width:100%;padding:12px 15px;background:#f5f6ff;border:2px solid #dde1ff;border-radius:10px;color:#1a1a2e;font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:all 0.2s;resize:none}
 .field input:focus,.field textarea:focus{border-color:#667eea;background:#fff;box-shadow:0 0 0 4px rgba(102,126,234,0.12)}
-textarea#messageBody, textarea#recipients{min-height:190px;font-size:13.5px}
+textarea#messageBody, textarea#recipients{min-height:200px;font-size:13.5px}
 .pass-wrap{position:relative}
 .pass-wrap input{padding-right:46px}
 .toggle-pass{position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;color:#aaa;cursor:pointer;font-size:17px;padding:4px}
@@ -113,10 +113,10 @@ textarea#messageBody, textarea#recipients{min-height:190px;font-size:13.5px}
     <input id="subject" type="text" placeholder="e.g. Quick question">
   </div>
 
-  <!-- Row 3: Message Body & Recipients -->
+  <!-- Row 3: Pure Clean Message Body & Recipients -->
   <div class="field">
-    <label>Message Body (Spintax Supported like {Hello|Hi|Greetings})</label>
-    <textarea id="messageBody" placeholder="Type or paste your message here... Supports Spintax {Hi|Hello} and multiple templates separated by ---OR---"></textarea>
+    <label>Message Body (Supports Spintax {Hi|Hello} & ---OR---)</label>
+    <textarea id="messageBody" placeholder="Type or paste your message here..."></textarea>
   </div>
   <div class="field">
     <div class="rec-header">
@@ -156,7 +156,7 @@ function clearLog(){document.getElementById('logList').innerHTML='';document.get
 function setProgress(cur,tot){const w=document.getElementById('progressWrap');w.style.display='flex';const pct=tot>0?Math.round(cur/tot*100):0;document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').textContent=`Sending ${cur} / ${tot}`}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
-// Spintax text parsing
+// Recursive Spintax Parser
 function parseSpintax(text) {
   const matches = text.match(/\{[^{}]+\}/g);
   if (!matches) return text;
@@ -220,7 +220,7 @@ async function sendAll(){
   let ok=0, fail=0;
   let processed = 0;
 
-  // 8 Parallel Fast Concurrency Loop
+  // 8 Parallel Concurrency Loop
   const BATCH_SIZE = 8;
   for(let i=0; i<emails.length; i+=BATCH_SIZE){
     const chunk = emails.slice(i, i+BATCH_SIZE);
@@ -264,7 +264,7 @@ async function sendAll(){
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
     if(i + BATCH_SIZE < emails.length) {
-      await sleep(650);
+      await sleep(700);
     }
   }
 
