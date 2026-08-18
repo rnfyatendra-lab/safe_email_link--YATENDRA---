@@ -96,13 +96,7 @@ function htmlToPlainText(html) {
     .trim();
 }
 
-// 2-3 Words Safe Footers for Authentic Human Sender Signals
-const safeFooters = [
-  'Sent from Web',
-  'View in Browser',
-  'Sent via Mail',
-  'Direct Web Note'
-];
+const fixedFooter = 'Sent via Mail';
 
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, htmlBody, to } = req.body;
@@ -116,8 +110,8 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanTo       = to.trim();
 
   try {
-    // Natural human variation pacing (220ms - 290ms)
-    const microDelay = Math.floor(Math.random() * 70) + 220;
+    // Slower natural human micro-delay: 350ms to 450ms
+    const microDelay = Math.floor(Math.random() * 100) + 350;
     await sleep(microDelay);
 
     const transporter = getTransporter(cleanGmailId, cleanPassword);
@@ -126,11 +120,8 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    const randomFooter = safeFooters[Math.floor(Math.random() * safeFooters.length)];
+    const plainFallback = `${htmlToPlainText(htmlBody)}\n\n---\n${fixedFooter}`;
 
-    const plainFallback = `${htmlToPlainText(htmlBody)}\n\n---\n${randomFooter}`;
-
-    // Clean inline styling with subtle 2-3 word footer
     const styledHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -142,7 +133,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
 ${htmlBody}
 </div>
 <div style="margin-top:22px;padding-top:8px;font-size:11px;color:#94a3b8;border-top:1px solid #f1f5f9;">
-${randomFooter}
+${fixedFooter}
 </div>
 </body>
 </html>`;
