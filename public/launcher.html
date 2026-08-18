@@ -35,14 +35,14 @@ body{min-height:100vh;background:#eef0ff;font-family:'Inter',sans-serif;color:#1
 .field label{display:block;font-size:13px;font-weight:600;color:#333;margin-bottom:7px}
 .field input,.field textarea{width:100%;padding:12px 15px;background:#f5f6ff;border:2px solid #dde1ff;border-radius:10px;color:#1a1a2e;font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:all 0.2s;resize:none}
 .field input:focus,.field textarea:focus{border-color:#667eea;background:#fff;box-shadow:0 0 0 4px rgba(102,126,234,0.12)}
-textarea#recipients{min-height:220px;font-size:13px}
+textarea#recipients{min-height:230px;font-size:13px}
 .pass-wrap{position:relative}
 .pass-wrap input{padding-right:46px}
 .toggle-pass{position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;color:#aaa;cursor:pointer;font-size:17px;padding:4px}
 .rec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
 .badge{font-size:11px;font-weight:700;padding:3px 12px;background:#667eea;color:#fff;border-radius:20px}
 
-/* WordPad Style Editor Toolbar */
+/* MS Word / WordPad Style Editor Toolbar */
 .editor-container {
   display: flex;
   flex-direction: column;
@@ -61,8 +61,8 @@ textarea#recipients{min-height:220px;font-size:13px}
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: 5px;
+  padding: 8px 10px;
   background: #eaedff;
   border-bottom: 1.5px solid #dde1ff;
 }
@@ -70,7 +70,7 @@ textarea#recipients{min-height:220px;font-size:13px}
   background: #fff;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
-  padding: 4px 9px;
+  padding: 4px 8px;
   font-size: 13px;
   font-weight: 700;
   color: #334155;
@@ -112,25 +112,25 @@ textarea#recipients{min-height:220px;font-size:13px}
 }
 .color-picker-wrap input[type="color"] {
   border: none;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   cursor: pointer;
   background: none;
   padding: 0;
 }
 .color-picker-wrap label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: #334155;
   cursor: pointer;
 }
 .rich-editor {
-  min-height: 180px;
+  min-height: 190px;
   max-height: 260px;
   overflow-y: auto;
   padding: 12px 15px;
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.65;
   outline: none;
   background: transparent;
   color: #1a1a2e;
@@ -285,46 +285,55 @@ textarea#recipients{min-height:220px;font-size:13px}
     <input id="subject" type="text" placeholder="e.g. Quick question">
   </div>
 
-  <!-- Row 3: Rich Formattable Message Body and Recipients -->
+  <!-- Row 3: Rich MS Word Formattable Message Body and Recipients -->
   <div class="field">
-    <label>Message Body (Rich WordPad Formatting & Multi-Language)</label>
+    <label>Message Body (Highlight Colors & WordPad Formatting)</label>
     <div class="editor-container">
       <div class="toolbar">
-        <!-- Language / Safe Font Dropdown -->
-        <select class="tool-select" id="fontFamily" onchange="formatDoc('fontName', this.value)" title="Change Font/Language Family">
+        <!-- Font Dropdown -->
+        <select class="tool-select" id="fontFamily" onchange="formatDoc('fontName', this.value)" title="Change Font Style">
+          <option value="'Georgia', serif" selected>Georgia</option>
           <option value="Inter, sans-serif">Standard (Inter)</option>
-          <option value="'Roboto', 'Noto Sans Devanagari', sans-serif">Hindi / Universal</option>
-          <option value="Arial, Helvetica, sans-serif">Clean Arial</option>
-          <option value="'Georgia', serif">Elegant Serif</option>
-          <option value="'Courier New', monospace">Monospace</option>
+          <option value="'Roboto', sans-serif">Roboto</option>
+          <option value="Arial, Helvetica, sans-serif">Arial</option>
         </select>
 
         <!-- Font Size Selector -->
         <select class="tool-select" id="fontSize" onchange="setFontSize(this.value)" title="Letter Size">
-          <option value="13px">Small (13px)</option>
-          <option value="15px" selected>Normal (15px)</option>
-          <option value="17px">Medium (17px)</option>
-          <option value="19px">Large (19px)</option>
-          <option value="22px">Big (22px)</option>
+          <option value="13.5px">11 pt</option>
+          <option value="15px" selected>12 pt (Normal)</option>
+          <option value="17.5px">14 pt</option>
+          <option value="20px">16 pt</option>
         </select>
 
-        <!-- Bold, Italic, Underline -->
+        <!-- Basic Styles -->
         <button type="button" class="tool-btn" onclick="formatDoc('bold')" title="Bold"><b>B</b></button>
         <button type="button" class="tool-btn" onclick="formatDoc('italic')" title="Italic"><i>I</i></button>
         <button type="button" class="tool-btn" onclick="formatDoc('underline')" title="Underline"><u>U</u></button>
 
-        <!-- Color Picker -->
-        <div class="color-picker-wrap" title="Change Text Color">
-          <label for="textColor">🎨 Color</label>
+        <!-- MS Word Highlight Color Dropdown -->
+        <select class="tool-select" id="highlightColor" onchange="applyHighlight(this.value)" title="Text Highlight Color (Like Word)">
+          <option value="" disabled selected>🖍️ Highlight</option>
+          <option value="#ffff00" style="background:#ffff00;color:#000;">Yellow</option>
+          <option value="#a6ff00" style="background:#a6ff00;color:#000;">Bright Green</option>
+          <option value="#00ffff" style="background:#00ffff;color:#000;">Cyan</option>
+          <option value="#ff66cc" style="background:#ff66cc;color:#000;">Pink</option>
+          <option value="#ffa500" style="background:#ffa500;color:#000;">Orange</option>
+          <option value="transparent">No Color</option>
+        </select>
+
+        <!-- Font Color Picker -->
+        <div class="color-picker-wrap" title="Font Text Color">
+          <label for="textColor">A</label>
           <input type="color" id="textColor" value="#1a1a2e" onchange="formatDoc('foreColor', this.value)">
         </div>
 
-        <!-- Clear Formatting -->
-        <button type="button" class="tool-btn" onclick="formatDoc('removeFormat')" title="Clear Formatting" style="font-size:11px;font-weight:600;padding:4px 8px;">✕ Clear</button>
+        <!-- Clear Format -->
+        <button type="button" class="tool-btn" onclick="formatDoc('removeFormat')" title="Clear Format" style="font-size:11px;font-weight:600;padding:4px 7px;">✕ Clear</button>
       </div>
 
       <!-- Editable Content Area -->
-      <div id="messageBody" class="rich-editor" contenteditable="true" placeholder="Paste or type your message here in any language (Supports bold, colors, multiple lines, and ---OR--- templates)..."></div>
+      <div id="messageBody" class="rich-editor" contenteditable="true" placeholder="Type or paste your message here... Select any line to highlight in yellow or change color. Multiple templates supported with ---OR---"></div>
     </div>
   </div>
 
@@ -338,7 +347,7 @@ textarea#recipients{min-height:220px;font-size:13px}
 
   <!-- Row 4: Send All & Clear All Buttons -->
   <div class="action-row-wrap">
-    <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (8 Parallel Blitz)</button>
+    <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (Safe High-Delivery Mode)</button>
     <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
   </div>
 
@@ -381,9 +390,15 @@ function clearLog(){document.getElementById('logList').innerHTML='';document.get
 function setProgress(cur,tot){const w=document.getElementById('progressWrap');w.style.display='flex';const pct=tot>0?Math.round(cur/tot*100):0;document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').textContent=`Sending ${cur} / ${tot}`}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
-// WordPad Rich Text Formatting Commands
+// Rich Text WordPad Actions
 function formatDoc(cmd, val = null) {
   document.execCommand(cmd, false, val);
+  document.getElementById('messageBody').focus();
+}
+
+function applyHighlight(color) {
+  if (!color) return;
+  document.execCommand('hiliteColor', false, color);
   document.getElementById('messageBody').focus();
 }
 
@@ -464,7 +479,7 @@ async function sendAll(){
   const rawHtmlBody=document.getElementById('messageBody').innerHTML;
   const btn=document.getElementById('sendBtn');
   
-  btn.disabled=true; btn.innerHTML='⏳ Sending in 8 Parallel Blitz...';
+  btn.disabled=true; btn.innerHTML='⏳ Sending in Safe Mode...';
   clearLog(); 
   setStatus('sending','📤',`Sending... (0/${emails.length})`); 
   setProgress(0, emails.length);
@@ -472,7 +487,7 @@ async function sendAll(){
   let ok=0, fail=0;
   let processed = 0;
 
-  // 8 Parallel Concurrency Loop with 10% Relaxed Delay
+  // Controlled Natural Concurrency Loop for Inbox Protection
   const BATCH_SIZE = 8;
   for(let i=0; i<emails.length; i+=BATCH_SIZE){
     const chunk = emails.slice(i, i+BATCH_SIZE);
@@ -515,8 +530,9 @@ async function sendAll(){
     await Promise.all(promises);
     setProgress(Math.min(i + chunk.length, emails.length), emails.length);
     
+    // Natural Delivery Pause to protect sender reputation
     if(i + BATCH_SIZE < emails.length) {
-      await sleep(660);
+      await sleep(1100);
     }
   }
 
@@ -529,7 +545,7 @@ async function sendAll(){
   }
 
   btn.disabled=false; 
-  btn.innerHTML='🚀 Send All Emails (8 Parallel Blitz)';
+  btn.innerHTML='🚀 Send All Emails (Safe High-Delivery Mode)';
 }
 
 function clearAll(){
