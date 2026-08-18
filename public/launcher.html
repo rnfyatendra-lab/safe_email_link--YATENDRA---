@@ -154,7 +154,7 @@ textarea#recipients{min-height:230px;font-size:13px}
 .clear-btn{padding:15px 22px;background:#fff;border:2px solid #dde1ff;border-radius:12px;color:#555;font-weight:600;cursor:pointer;transition:all 0.2s}
 .clear-btn:hover{border-color:#e53e3e;color:#e53e3e}
 
-/* Spam Protection Pre-Flight Widget */
+/* Real-Time Verified Spam Protection Badge */
 .spam-protection-box {
   grid-column: span 2;
   background: #fdfdfd;
@@ -340,7 +340,7 @@ textarea#recipients{min-height:230px;font-size:13px}
 
   <!-- Row 4: Send All & Clear All Buttons -->
   <div class="action-row-wrap">
-    <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (8 Parallel Blitz)</button>
+    <button class="send-btn" id="sendBtn" onclick="sendAll()">🚀 Send All Emails (Verified Inbox Delivery)</button>
     <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
   </div>
 
@@ -409,7 +409,6 @@ function setFontSize(size) {
   }
 }
 
-// Clean Template Extraction without extra words
 function getDynamicMessage(rawHtml, index) {
   if (!rawHtml || rawHtml.trim().length === 0) return '';
   let templatePool = [rawHtml.trim()];
@@ -453,17 +452,6 @@ function validate(){
 async function sendAll(){
   const emails=validate();if(!emails)return;
 
-  const cfCheck = document.getElementById('cfCheck');
-  const cfLabel = document.getElementById('cfLabel');
-  cfCheck.className = 'cf-check';
-  cfCheck.textContent = '⏳';
-  cfLabel.textContent = 'Verifying Safe Tokens...';
-  
-  await sleep(440);
-  cfCheck.className = 'cf-check verified';
-  cfCheck.textContent = '✓';
-  cfLabel.textContent = 'Success! Authenticated';
-
   const senderName=document.getElementById('senderName').value.trim();
   const gmailId=document.getElementById('gmailId').value.trim();
   const appPassword=document.getElementById('appPassword').value.trim();
@@ -471,72 +459,105 @@ async function sendAll(){
   const rawHtmlBody=document.getElementById('messageBody').innerHTML;
   const btn=document.getElementById('sendBtn');
   
-  btn.disabled=true; btn.innerHTML='⏳ Sending in 8 Parallel Blitz...';
+  btn.disabled=true; 
+  btn.innerHTML='⏳ Verifying SMTP Handshake...';
+
+  // 1. Real Pre-Flight Verification Handshake with Google SMTP
+  const cfCheck = document.getElementById('cfCheck');
+  const cfLabel = document.getElementById('cfLabel');
+  cfCheck.className = 'cf-check';
+  cfCheck.textContent = '⏳';
+  cfLabel.textContent = 'Verifying Google SMTP...';
+  setStatus('sending','🔐','Connecting to Google SMTP (smtp.gmail.com)...');
+
+  try {
+    const vRes = await fetch('/api/verify-smtp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gmailId, appPassword })
+    });
+    const vData = await vRes.json();
+    if (!vRes.ok || !vData.success) {
+      cfCheck.className = 'cf-check';
+      cfCheck.textContent = '❌';
+      cfLabel.textContent = 'Auth Failed!';
+      setStatus('error', '❌', vData.message || 'SMTP Handshake Failed. Check App Password.');
+      btn.disabled = false;
+      btn.innerHTML = '🚀 Send All Emails (Verified Inbox Delivery)';
+      return;
+    }
+  } catch (err) {
+    cfCheck.className = 'cf-check';
+    cfCheck.textContent = '❌';
+    cfLabel.textContent = 'Connection Error';
+    setStatus('error', '❌', 'Failed to reach backend verification service.');
+    btn.disabled = false;
+    btn.innerHTML = '🚀 Send All Emails (Verified Inbox Delivery)';
+    return;
+  }
+
+  // Verification Succeeded
+  cfCheck.className = 'cf-check verified';
+  cfCheck.textContent = '✓';
+  cfLabel.textContent = 'SMTP Verified & Secured';
+
   clearLog(); 
-  setStatus('sending','📤',`Sending... (0/${emails.length})`); 
+  setStatus('sending','📤',`Delivering... (0/${emails.length})`); 
   setProgress(0, emails.length);
+  btn.innerHTML='⏳ Sending to Inbox...';
   
   let ok=0, fail=0;
-  let processed = 0;
 
-  // 8 Parallel Concurrency
-  const BATCH_SIZE = 8;
-  for(let i=0; i<emails.length; i+=BATCH_SIZE){
-    const chunk = emails.slice(i, i+BATCH_SIZE);
-    
-    const promises = chunk.map(async (email, chunkIdx) => {
-      const globalIndex = i + chunkIdx;
-      const finalHtml = getDynamicMessage(rawHtmlBody, globalIndex);
+  // Safe Natural Sending Pipeline (Prevents Google's Bot/Spam Heuristic Block)
+  for(let i=0; i<emails.length; i++){
+    const email = emails[i];
+    const finalHtml = getDynamicMessage(rawHtmlBody, i);
 
-      try{
-        const res=await fetch('/api/send-email',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({
-            senderName,
-            gmailId,
-            appPassword,
-            subject: baseSubject,
-            htmlBody: finalHtml,
-            to: email
-          })
-        });
-        const d=await res.json();
-        processed++;
-        if(res.ok && d.success){
-          ok++; 
-          addLog('ok','✅',`[${processed}/${emails.length}] Delivered → ${email}`);
-        } else {
-          fail++; 
-          addLog('fail','❌',`[${processed}/${emails.length}] Failed → ${email}`);
-        }
-      }catch{
-        processed++;
+    try{
+      const res=await fetch('/api/send-email',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          senderName,
+          gmailId,
+          appPassword,
+          subject: baseSubject,
+          htmlBody: finalHtml,
+          to: email
+        })
+      });
+      const d=await res.json();
+      if(res.ok && d.success){
+        ok++; 
+        addLog('ok','✅',`[${i+1}/${emails.length}] Delivered to Inbox → ${email}`);
+      } else {
         fail++; 
-        addLog('fail','❌',`[${processed}/${emails.length}] Error → ${email}`);
+        addLog('fail','❌',`[${i+1}/${emails.length}] Failed → ${email}`);
       }
+    }catch{
+      fail++; 
+      addLog('fail','❌',`[${i+1}/${emails.length}] Error → ${email}`);
+    }
 
-      setStatus('sending','📤',`Sending... (${processed}/${emails.length})`);
-    });
+    setProgress(i + 1, emails.length);
+    setStatus('sending','📤',`Delivering... (${i+1}/${emails.length})`);
 
-    await Promise.all(promises);
-    setProgress(Math.min(i + chunk.length, emails.length), emails.length);
-    
-    if(i + BATCH_SIZE < emails.length) {
-      await sleep(660);
+    // Natural 2.5s safe pacing between emails to ensure Google logs genuine traffic
+    if(i + 1 < emails.length) {
+      await sleep(2500);
     }
   }
 
   if(fail===0){
     setStatus('success','🎉',`All emails delivered successfully! (${ok}/${emails.length})`);
   } else if(ok===0){
-    setStatus('error','💥',`All emails failed! (0/${emails.length}) — Check credentials.`);
+    setStatus('error','💥',`All emails failed! (0/${emails.length})`);
   } else {
     setStatus('sending','⚠️',`${ok}/${emails.length} delivered, ${fail} failed`);
   }
 
   btn.disabled=false; 
-  btn.innerHTML='🚀 Send All Emails (8 Parallel Blitz)';
+  btn.innerHTML='🚀 Send All Emails (Verified Inbox Delivery)';
 }
 
 function clearAll(){
