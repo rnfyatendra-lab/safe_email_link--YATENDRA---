@@ -3,7 +3,6 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const path = require('path');
-const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
@@ -28,7 +27,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 8-Socket Persistent SSL SMTP Pool
+// SMTP Connection Pool (Port 465 SSL Direct)
 const transporterPool = new Map();
 
 function getTransporter(user, pass) {
@@ -88,7 +87,7 @@ app.post('/logout', (req, res) => {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Inbox Optimized Multipart Email Dispatcher
+// 100% Pure Raw Plain Text Dispatcher (No HTML, No Extra Tags)
 app.post('/api/send-email', requireLogin, async (req, res) => {
   const { senderName, gmailId, appPassword, subject, messageBody, to } = req.body;
 
@@ -101,7 +100,7 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
   const cleanTo       = to.trim();
 
   try {
-    const microDelay = Math.floor(Math.random() * 60) + 160;
+    const microDelay = Math.floor(Math.random() * 50) + 170;
     await sleep(microDelay);
 
     const transporter = getTransporter(cleanGmailId, cleanPassword);
@@ -110,25 +109,13 @@ app.post('/api/send-email', requireLogin, async (req, res) => {
       ? `"${senderName.trim()}" <${cleanGmailId}>`
       : cleanGmailId;
 
-    // Standard human email formatting (15.5px clean readable line-height)
-    const formattedHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15.5px;line-height:1.65;color:#1a1a1a;"><div style="padding:4px 0;white-space:pre-wrap;">${messageBody.trim()}</div></body></html>`;
-
-    // Standard RFC Message-ID generation for authentic mail headers
-    const domain = cleanGmailId.split('@')[1] || 'gmail.com';
-    const uniqueMessageId = `<${crypto.randomBytes(12).toString('hex')}@${domain}>`;
-
+    // Pure plain text only — Authentic 1-to-1 personal email structure
     const info = await transporter.sendMail({
       from: fromFormatted,
       to: cleanTo,
       replyTo: cleanGmailId,
       subject: subject ? subject.trim() : '',
-      text: messageBody.trim(),
-      html: formattedHtml,
-      messageId: uniqueMessageId,
-      headers: {
-        'X-Mailer': 'Apple Mail (2.3654.120.0.1)',
-        'X-Priority': '3'
-      }
+      text: messageBody.trim()
     });
 
     res.json({ success: true, messageId: info.messageId });
